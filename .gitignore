@@ -45,3 +45,12 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+*.csv
+tol/data/secret-keys.json
+tol/index.html
+tol/package.json~
+tol/server.js~
+*.save
+*.pem
+*.bak
+tol/DEADJOE
