@@ -1,0 +1,27 @@
+{
+  "name": "tol",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon server.js",
+    "forever": "forever start -a -o ./logs/out.log -e ./logs/err.log -c nodemon server.js",
+    "kill": "killall -9 node"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.15.1",
+    "cors-express": "^0.2.2",
+    "crypto-js": "^3.1.6",
+    "express": "^4.13.4",
+    "express-cors": "0.0.3",
+    "fast-csv": "^2.0.1",
+    "mongodb": "^2.2.1",
+    "mongoose": "^4.5.4"
+  },
+  "devDependencies": {
+    "nodemon": "^1.9.2"
+  }
+}
