@@ -19,7 +19,8 @@
     "express-cors": "0.0.3",
     "fast-csv": "^2.0.1",
     "mongodb": "^2.2.1",
-    "mongoose": "^4.5.4"
+    "mongoose": "^4.5.4",
+    "typeof": "^1.0.0"
   },
   "devDependencies": {
     "nodemon": "^1.9.2"
