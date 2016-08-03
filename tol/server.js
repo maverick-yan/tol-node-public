@@ -79,6 +79,14 @@ function GetDateTime() {
         .replace(/\..+/, '');   // delete the dot and everything after
 }
 
+// GET - Default (root)
+app.get('/', (req, res) => {
+    console.log('GET request to "/"..');
+res.header('Content-type', 'text/html');
+return res.end('<h1>Welcome to the Throne of Lies API</h1>' +
+    '<h2>Check back later for public routes.</h2>');
+});
+
 // ##############################################################################################
 // PlayFab SDK
 
@@ -246,13 +254,6 @@ app.post('/pf-getuserinv', (req, res) => {
 //	console.log( 'GS (onMessage): ' + JSON.stringify(res) );
 //}
 //
-//// GET - Default @ https://api.ThroneOfLies.com:55555/
-//app.get('/', (req, res) => {
-//  console.log('GET request to "/"..');
-//  res.header('Content-type', 'text/html');
-//  return res.end('<h1>Welcome to the Throne of Lies API</h1>' +
-//  '<h2>Check back later for public routes.</h2>');
-//});
 //
 //// POST -- Encrypt GS secret >> Send it back
 //app.post('/gs-secret', (req, res) => {
