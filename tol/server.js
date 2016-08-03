@@ -7,19 +7,19 @@
 
 // Init
 console.log('Node Started..');
-var PORT = 55555;
+var PORT = 55555; // You can change this
 
-var fs = require('fs');					 						 // Filestream
-var csv = require('fast-csv');			 						 // Read CSV files
-var https = require('https');			 						 // Create secure HTTPS server
-var express = require('express');		 					     // The main web handler
-var bodyParser = require('body-parser'); 						 // Allows for querying JSON formats
-var MongoClient = require('mongodb').MongoClient;				 // NoSQL DB
-var cors = require('express-cors');								 // Cross-Origin access rules
-var crypto = require('crypto');									 // Integrated cryptography library for hash/encrypt
-var Base64 = require('crypto-js/enc-base64');					 // Extension to Crypto for Base64 algorithms
-var PlayFabClient = require('./playfab-node/PlayFabClient.js');	 // PlayFab BaaS SDK
-var gameSparks = new require('./gamesparks-node/GameSparks.js'); // GameSparks BaaS SDK
+var fs = require('fs'); // Filestream
+//var csv = require('fast-csv'); // [OPTIONAL/EXPERIMENTAL] Read CSV files
+var https = require('https'); // Create secure HTTPS server
+var express = require('express'); // The main web handler
+var bodyParser = require('body-parser'); // Allows for querying JSON formats
+//var MongoClient = require('mongodb').MongoClient; // [OPTIONAL/EXPERIMENTAL] NoSQL DB
+var cors = require('express-cors'); // Cross-Origin access rules
+//var crypto = require('crypto'); // [OPTIONAL/EXPERIMENTAL] Integrated cryptography library for hash/encrypt
+//var Base64 = require('crypto-js/enc-base64'); // [OPTIONAL/EXPERIMENTAL] Extension to Crypto for Base64 algorithms
+var PlayFabClient = require('./playfab-node/PlayFabClient.js');	// PlayFab BaaS SDK
+//var gameSparks = new require('./gamesparks-node/GameSparks.js'); // GameSparks BaaS SDK
 
 var app = express();
 
@@ -83,7 +83,8 @@ function GetDateTime() {
 app.get('/', (req, res) => {
     console.log('GET request to "/"..');
 res.header('Content-type', 'text/html');
-return res.end('<h1>Welcome to the Throne of Lies API</h1>' +
+return res.end('' +
+    '<h1>Welcome to the <a href="http://throneofli.es/game">Throne of Lies</a> API</h1>' +
     '<h2>Check back later for public routes.</h2>');
 });
 
