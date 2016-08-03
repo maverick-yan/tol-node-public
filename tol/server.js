@@ -79,7 +79,7 @@ function GetDateTime() {
         .replace(/\..+/, '');   // delete the dot and everything after
 }
 
-// ############################################################################
+// ##############################################################################################
 // PlayFab SDK
 
 // Init - The title/secret will be obtained from the JSON file above
@@ -122,37 +122,75 @@ function PFGenericCallback(res, err, data) {
 }
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// https://api.playfab.com/Documentation/Client/method/LoginWithPlayFab
+app.post('/pf-loginwithpf', (req, res) => {
+    // Init
+    PFInitPost(req, '/pf-loginwithpf');
+
+    // Send
+    PlayFabClient.LoginWithPlayFab(req.body, (err, data) => {
+        PFGenericCallback(res, err, data);
+    });
+});
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// https://api.playfab.com/Documentation/Client/method/LoginWithEmailAddress
+app.post('/pf-loginwithemail', (req, res) => {
+    // Init
+    PFInitPost(req, '/pf-loginwithemail');
+
+    // Send
+    PlayFabClient.LoginWithEmailAddress(req.body, (err, data) => {
+        PFGenericCallback(res, err, data);
+    });
+});
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// https://api.playfab.com/Documentation/Client/method/GetAccountInfo
+app.post('/pf-getacctinfo', (req, res) => {
+    // Init
+    PFInitPost(req, '/pf-getacctinfo');
+
+    // Send
+    PlayFabClient.GetAccountInfo(req.body, (err, data) => {
+        PFGenericCallback(res, err, data);
+    });
+});
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// https://api.playfab.com/Documentation/Client/method/RegisterPlayFabUser
+app.post('/pf-regpfuser', (req, res) => {
+    // Init
+    PFInitPost(req, '/pf-regpfuser');
+
+    // Send
+    PlayFabClient.RegisterPlayFabUser(req.body, (err, data) => {
+        PFGenericCallback(res, err, data);
+    });
+});
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/LoginWithFacebook
 app.post('/pf-loginwithfb', (req, res) => {
-  // Init
-  PFInitPost(req, '/pf-loginwithfb');
-  
-  // Send
-  PlayFabClient.LoginWithFacebook(req.body, (err, data) => {
-	// Callback >>
-    if (err) {
-      // Fail
-      console.log( 'PF (PF_ERR): ' + J(err, true) + ' >>' );
-      res.send(data);
+    // Init
+    PFInitPost(req, '/pf-loginwithfb');
 
-    } else if (data) {
-      // Success
-      console.log( 'PF (RESULT): ' + J(data, true) + ' >>' );
-      res.send(data);
+    // Send
+    PlayFabClient.LoginWithFacebook(req.body, (err, data) => {
+        PFGenericCallback(res, err, data);
+    });
+});
 
-    } else {
-      // (?) Something went wrong -- null..?
-      console.log('PF (UNKNOWN_ERR): Null..? >>');
-      if (!err) err = {
-        "err": 'unknown'
-      };
-      res.send(err);
-    }
-    
-    // Done
-    console.log('####################################');
-    res.end();
-  });
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// https://api.playfab.com/Documentation/Client/method/LinkFacebookAccount
+app.post('/pf-linkfbacct', (req, res) => {
+    // Init
+    PFInitPost(req, '/pf-linkfbacct');
+
+    // Send
+    PlayFabClient.LinkFacebookAccount(req.body, (err, data) => {
+        PFGenericCallback(res, err, data);
+    });
 });
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -167,7 +205,31 @@ app.post('/pf-unlinkfbacct', (req, res) => {
     });
 });
 
-// ##############################################################################
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// https://api.playfab.com/Documentation/Client/method/RedeemCoupon
+app.post('/pf-redeemcoupon', (req, res) => {
+    // Init
+    PFInitPost(req, '/pf-redeemcoupon');
+
+    // Send
+    PlayFabClient.RedeemCoupon(req.body, (err, data) => {
+        PFGenericCallback(res, err, data);
+    });
+});
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// https://api.playfab.com/Documentation/Client/method/GetUserInventory
+app.post('/pf-getuserinv', (req, res) => {
+    // Init
+    PFInitPost(req, '/pf-getuserinv');
+
+    // Send
+    PlayFabClient.GetUserInventory(req.body, (err, data) => {
+        PFGenericCallback(res, err, data);
+    });
+});
+
+// ##############################################################################################
 // EXPERIMENTAL: GameSparks SDK
 
 //var gsApiKey = secretKeys['gsApiKey'];
