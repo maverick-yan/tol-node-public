@@ -9,4 +9,3 @@ tol/ssl/cert-baks/cert.pem
 *.json~
 tol/ssl/cert.pem
 tol/ssl/key.pem
-*.log

@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
-    "forever": "forever start -a -o ./logs/out.log -e ./logs/err.log -c nodemon server.js",
+    "forever": "forever -a server.js -o .logs/out.log -e ./logs/err.log -c 'nodemon --exitcrash'",
     "kill": "killall -9 node"
   },
   "author": "",
