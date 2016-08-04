@@ -1,7 +1,7 @@
 #tol-node-public (TNP)
 Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https://www.ThroneOfLies.com
 
-<img src="https://i.imgur.com/DobekP8.png">
+<img src="https://i.imgur.com/bxX9cZ2.png">
 
 * This is a Node.js wrapper to a game developer's BaaS.
 * More specifically, PlayFab. There are also some commented-out experiments with GameSparks.
