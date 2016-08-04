@@ -82,10 +82,23 @@ function GetDateTime() {
 // GET - Default (root)
 app.get('/', (req, res) => {
     console.log('GET request to "/"..');
-res.header('Content-type', 'text/html');
-return res.end('' +
-    '<h1>Welcome to the <a href="http://throneofli.es/game">Throne of Lies</a> API</h1>' +
-    '<h2>Check back later for public routes.</h2>');
+    res.header('content-type', 'text/html');
+    return res.end('' +
+        '<h1>Welcome to the <a href="http://throneofli.es/game">Throne of Lies</a> API</h1>' +
+        '<h2>Check back later for public routes.</h2>');
+});
+
+// POST - Test (root)
+app.post('/', (req, res) => {
+    console.log('POST request to "/"..');
+    res.header('content-type', 'application/json');
+    //for (var key in req.body) {
+    //    console.log( 'FOUND KEY: ' + J(key) );
+    //}
+    var json = {
+      "test": "complete!"
+    };
+    res.send(json);
 });
 
 // ##############################################################################################
@@ -182,6 +195,7 @@ app.post('/pf-regpfuser', (req, res) => {
 // https://api.playfab.com/Documentation/Client/method/LoginWithFacebook
 app.post('/pf-loginwithfb', (req, res) => {
     // Init
+    console.log("TEST @ /pf-loginwithfb");
     PFInitPost(req, '/pf-loginwithfb');
 
     // Send
