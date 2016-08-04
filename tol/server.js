@@ -124,7 +124,7 @@ function PFGenericCallback(res, err, data) {
     if (err) {
         // Fail
         console.log( 'PF (PF_ERR): ' + J(err, true) + ' >>' );
-        res.send(data);
+        res.send(err);
     } else if (data) {
         // Success
         console.log( 'PF (RESULT): ' + J(data, true) + ' >>' );
@@ -195,7 +195,6 @@ app.post('/pf-regpfuser', (req, res) => {
 // https://api.playfab.com/Documentation/Client/method/LoginWithFacebook
 app.post('/pf-loginwithfb', (req, res) => {
     // Init
-    console.log("TEST @ /pf-loginwithfb");
     PFInitPost(req, '/pf-loginwithfb');
 
     // Send
