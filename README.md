@@ -14,15 +14,20 @@ Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https:/
 2. Rename "rename_me_to_secret-keys.json" to "secret-keys.json"
 3. SSL (https) is required: Copy your "cert.pem" and "key.pem" SSL/TLS files to /tol/ssl/
 
-**HINT:**
+## Hint:
 If you don't have SSL (https), you probably shouldn't be making API calls anyway :)
 It's worth the Google search -- it will take you just a couple days to get used to it.
 You may have to spend ~$10/year for a legit SSL certificate that's not self-signed.
 
-**Disclaimer:**
+## Scripts:
+`package.json` comes with two scripts:
+1. `forever` - type `sudo npm run forever` to run forever+nodemon together to keep your app going and restart on changes, automatically.
+2. `kill` - type `sudo npm run kill` to kill forever+nodemon.
+
+## Disclaimer:
 * This is a template/wrapper for PlayFab with some experiments of other useful/relevant features.
 * This repo may or may not be updated/monitored by me. If you want authority for pull requests and I've been slack, let me know~
 * Branch out as you please: This is license-free, although if you gave me credit, I'd toss you a +1 for coder's karma :D
 
-**Like what you see?**
+## Like what you see?
 Support my game @ https://www.ThroneOfLies.com and I'll call that a thanks ;)
