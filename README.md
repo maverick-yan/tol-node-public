@@ -21,7 +21,9 @@ You may have to spend ~$10/year for a legit SSL certificate that's not self-sign
 
 ## Scripts:
 `package.json` comes with two scripts:
+
 1. `forever` - type `sudo npm run forever` to run forever+nodemon together to keep your app going and restart on changes, automatically.
+
 2. `kill` - type `sudo npm run kill` to kill forever+nodemon.
 
 ## Disclaimer:
