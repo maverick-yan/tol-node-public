@@ -12,7 +12,7 @@ Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https:/
 ## PreReqs:
 1. Edit "rename_me_to_secret-keys.json" file in /tol/data/ and replace placeholder values.
 2. Rename "rename_me_to_secret-keys.json" to "secret-keys.json"
-3. SSL (https) is required: Copy your "cert.pem" and "key.pem" SSL/TLS files to /tol/ssl/
+3. SSL (https) is required: Copy your `cert.pem` and `key.pem` SSL/TLS files to /tol/ssl/
 
 ## Hint:
 If you don't have SSL (https), you probably shouldn't be making API calls anyway :)
