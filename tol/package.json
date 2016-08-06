@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
-    "forever": "forever -a server.js -o .logs/out.log -e ./logs/err.log -c 'nodemon --exitcrash'",
+    "forever": "sudo forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' server.js -o .logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
     "kill": "killall -9 node"
   },
   "author": "",
@@ -18,8 +18,10 @@
     "express": "^4.13.4",
     "express-cors": "0.0.3",
     "fast-csv": "^2.0.1",
+    "forever": "^0.15.2",
     "mongodb": "^2.2.1",
     "mongoose": "^4.5.4",
+    "nodemon": "^1.10.0",
     "typeof": "^1.0.0"
   },
   "devDependencies": {
