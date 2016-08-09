@@ -24,14 +24,22 @@ var PlayFabClient = require('./playfab-node/PlayFabClient.js');	// PlayFab BaaS 
 var app = express();
 
 // Use SSL -- must have your own certificates at ./ssl/ (both key.pem and cert.pem). You may need to Google this.
+var options;
+var server;
+
 try {
-  https.createServer({
-    key: fs.readFileSync('./ssl/key.pem'),
-    cert: fs.readFileSync('./ssl/cert.pem')
-  }, app).listen(PORT);	
-  console.log('Listening on PORT ' + PORT);
-} catch (e) {
-	console.log("**WARNING: You forgot to copy your 'key.pem' and 'cert.pem' SSL/TLS files to /tol/data/");
+  options = {
+    key: fs.readFileSync( './ssl/key.pem' ),
+    cert: fs.readFileSync( './ssl/cert.pem' )
+  };
+  
+  server = https.createServer(options, app).listen(PORT, function() {
+    console.log("Listening on port " + PORT);
+  });	  
+} 
+
+catch (e) {
+    console.log("**WARNING: You forgot to copy your 'key.pem' and 'cert.pem' SSL/TLS files to /tol/data/");
 }
 
 // Allow JSON queries
@@ -39,9 +47,12 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
 // Read JSON keys file sync - You need to edit ./data/secret-keys-json with your own title+secret
+var secretKeys;
 try {
-  var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
-} catch (err) {
+  secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
+} 
+
+catch (err) {
   console.log("**WARNING: You forgot to make 'secret-keys.json' @ /tol/data/");
 }
 
@@ -82,8 +93,7 @@ function GetDateTime() {
 // GET - Default (root)
 app.get('/', (req, res) => {
     console.log('GET request to "/"..');
-    res.header('content-type', 'text/html');
-    return res.end('' +
+    return res.send('' +
         '<h1>Welcome to the <a href="http://throneofli.es/game">Throne of Lies</a> API</h1>' +
         '<h2>Check back later for public routes.</h2>');
 });
@@ -105,6 +115,7 @@ app.post('/', (req, res) => {
 // PlayFab SDK
 
 // Init - The title/secret will be obtained from the JSON file above
+var count = 0;
 var pfTitleId = secretKeys['pfTitleId'];
 var pfSecret = secretKeys['pfSecret'];
 PlayFabClient.settings.titleId = pfTitleId;
@@ -114,8 +125,9 @@ PlayFabClient.settings.developerSecretKey = pfSecret;
 function PFInitPost(req, routeName) {
   console.log( '\n' + GetDateTime() );
   console.log('####################################');
-  console.log('POST request to "' + routeName + '" ..');
+  console.log('[' + count + ']POST request to "' + routeName + '" ..');
   console.log( '<< PF (REQ): ' + J(req.body, true) + '\n' );
+  count++;
 }
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
