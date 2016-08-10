@@ -6,7 +6,7 @@
     "start": "node ./bin/www",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
-    "forever": "sudo forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' .bin/www -o .logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
+    "forever": "sudo forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o .logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
     "kill": "killall -9 node"
   },
   "dependencies": {
@@ -16,8 +16,10 @@
     "debug": "~2.2.0",
     "express": "~4.13.4",
     "express-cors": "0.0.3",
+    "forever": "^0.15.2",
     "jade": "~1.11.0",
     "morgan": "~1.7.0",
+    "nodemon": "^1.10.0",
     "serve-favicon": "~2.3.0"
   }
 }

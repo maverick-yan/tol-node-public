@@ -4,21 +4,12 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-//var fs = require('fs');
-var cors = require('express-cors');
 var routes = require('./routes/index');
 var playfab = require('./routes/playfab');
 
 var app = express();
 
-// Allow CORS : Put your own sites here
-app.use(cors({  
-  allowedOrigins: 
-  [
-    '*.throneoflies.com', 
-    '*.imperium42.com'  
-  ]
-}));
+// NOTE: CORS is individual per-route (to separate public vs private)
 
 // Set template engine (NOTE: jade is now called 'pug')
 app.set('view engine', 'jade');

@@ -1,9 +1,17 @@
 // ...........................................................................................
 // routes/playfab.js
 var fs = require('fs');
+var cors = require('express-cors');
 var PlayFabClient = require('../playfab-node/PlayFabClient.js'); // PlayFab BaaS SDK
 var express = require('express');
 var router = express.Router();
+
+// Set cross-origin rules
+router.use(cors({
+  allowedOrigins: [
+    'https://*throneoflies.com*'
+  ]
+}));
 
 // Read JSON keys file sync - You need to edit ./data/secret-keys-json with your own title+secret
 var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
