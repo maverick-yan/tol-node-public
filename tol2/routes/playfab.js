@@ -1,28 +1,29 @@
 // ...........................................................................................
 // routes/playfab.js
 var fs = require('fs');
-var cors = require('express-cors');
+var cors = require('cors');
 var PlayFabClient = require('../playfab-node/PlayFabClient.js'); // PlayFab BaaS SDK
 var express = require('express');
 var router = express.Router();
 
-// Set cross-origin rules
-router.use(cors({
-  allowedOrigins: [
-    'https://*throneoflies.com*'
-  ]
-}));
+// cors
+var whitelist = ['https://throneoflies.com', 'https://www.throneoflies.com'];
+var corsOptions = {
+  origin: whitelist,
+  optionsSuccessStatus: 200
+};
+router.options('*', cors()); // include before other routes
 
 // Read JSON keys file sync - You need to edit ./data/secret-keys-json with your own title+secret
 var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 
 // GET - Test (root)
-router.get('/', function(req, res, next) {
-  res.send('Welcome to tol-pf: You are probably not authorized to be here ;)');
+router.get('/', cors(corsOptions), function(req, res, next) {
+  res.jsonp({status: 'ONLINE'});
 });
 
 // POST - Test (root)
-router.post('/', (req, res) => {    
+router.post('/', (req, res, next) => {    
   var email = req.body["Email"];
   console.log('POST request to "/"..');    
   res.header('content-type', 'application/json');    

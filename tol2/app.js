@@ -4,12 +4,14 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var routes = require('./routes/index');
+var publicRoutes = require('./routes/index');
 var playfab = require('./routes/playfab');
+//var cors = require('cors');
 
 var app = express();
 
 // NOTE: CORS is individual per-route (to separate public vs private)
+//app.use( cors() );
 
 // Set template engine (NOTE: jade is now called 'pug')
 app.set('view engine', 'jade');
@@ -22,7 +24,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', routes);
+app.use('/', publicRoutes);
 app.use('/playfab', playfab);
 
 // catch 404 and forward to error handler
