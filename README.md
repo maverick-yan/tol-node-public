@@ -1,7 +1,7 @@
 #tol-node-public (TNP)
 Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https://www.ThroneOfLies.com
 
-<img src="https://i.imgur.com/bxX9cZ2.png">
+<img src="https://i.imgur.com/fHBNMx2.png">
 
 * This is a Node.js wrapper to a game developer's BaaS.
 * More specifically, PlayFab. There are also some commented-out experiments with GameSparks.
@@ -13,6 +13,7 @@ Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https:/
 1. Edit "rename_me_to_secret-keys.json" file in /tol/data/ and replace placeholder values.
 2. Rename "rename_me_to_secret-keys.json" to "secret-keys.json"
 3. SSL (https) is required: Copy your `cert.pem` and `key.pem` SSL/TLS files to /tol/ssl/
+4. Go to **/tol2/** and type `sudo npm install --save` to install the req's (**node_modules/** dir)
 
 ## Hint:
 If you don't have SSL (https), you probably shouldn't be making API calls anyway :)
