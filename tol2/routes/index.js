@@ -9,7 +9,12 @@ router.use(cors({
   ]
 }));
 
-/* GET home page. */
+router.options('/', function (req, res) {
+  console.log('Got CORS OPTIONS request for', req.originalUrl);
+  res.send();
+});
+
+// GET home page
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'tol-node-public' });
 });
