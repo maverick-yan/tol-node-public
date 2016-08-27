@@ -18,7 +18,7 @@ var port = normalizePort(process.env.PORT || '55555');
 app.set('port', port);
 
 /**
- * Create HTTP server.
+ * Create HTTPS server.
  */
 
 var options = {
