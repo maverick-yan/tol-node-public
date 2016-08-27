@@ -23,7 +23,7 @@ router.get('/', cors(corsOptions), function(req, res, next) {
 });
 
 // POST - Test (root)
-router.post('/', (req, res, next) => {    
+router.post('/', cors(corsOptions), (req, res, next) => {    
   var email = req.body["Email"];
   console.log('POST request to "/"..');    
   res.header('content-type', 'application/json');    
@@ -78,7 +78,7 @@ function PFGenericCallback(res, err, data) {
 // PlayFab SDK : API Calls
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/LoginWithPlayFab
-router.post('/loginwithpf', (req, res) => {
+router.post('/loginwithpf', cors(corsOptions), (req, res) => {
     // Init
     PFInitPost(req, '/loginwithpf');
 
@@ -90,7 +90,7 @@ router.post('/loginwithpf', (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/LoginWithEmailAddress
-router.post('/loginwithemail', (req, res) => {
+router.post('/loginwithemail', cors(corsOptions), (req, res) => {
     // Init
     PFInitPost(req, '/loginwithemail');
 
@@ -102,7 +102,7 @@ router.post('/loginwithemail', (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/GetAccountInfo
-router.post('/getacctinfo', (req, res) => {
+router.post('/getacctinfo', cors(corsOptions), (req, res) => {
     // Init
     PFInitPost(req, '/getacctinfo');
 
@@ -114,7 +114,7 @@ router.post('/getacctinfo', (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/RegisterPlayFabUser
-router.post('/regpfuser', (req, res) => {
+router.post('/regpfuser', cors(corsOptions), (req, res) => {
     // Init
     PFInitPost(req, '/regpfuser');
 
@@ -126,7 +126,7 @@ router.post('/regpfuser', (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/LoginWithFacebook
-router.post('/loginwithfb', (req, res) => {
+router.post('/loginwithfb', cors(corsOptions), (req, res) => {
     // Init
     PFInitPost(req, '/loginwithfb');
 
@@ -138,7 +138,7 @@ router.post('/loginwithfb', (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/LinkFacebookAccount
-router.post('/linkfbacct', (req, res) => {
+router.post('/linkfbacct', cors(corsOptions), (req, res) => {
     // Init
     PFInitPost(req, '/linkfbacct');
 
@@ -150,7 +150,7 @@ router.post('/linkfbacct', (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/UnlinkFacebookAccount
-router.post('/unlinkfbacct', (req, res) => {
+router.post('/unlinkfbacct', cors(corsOptions), (req, res) => {
     // Init
     PFInitPost(req, '/unlinkfbacct');
 
@@ -162,7 +162,7 @@ router.post('/unlinkfbacct', (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/RedeemCoupon
-router.post('/redeemcoupon', (req, res) => {
+router.post('/redeemcoupon', cors(corsOptions), (req, res) => {
     // Init
     PFInitPost(req, '/redeemcoupon');
 
@@ -174,7 +174,7 @@ router.post('/redeemcoupon', (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/GetUserInventory
-router.post('/getuserinv', (req, res) => {
+router.post('/getuserinv', cors(corsOptions), (req, res) => {
     // Init
     PFInitPost(req, '/getuserinv');
 
