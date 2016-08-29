@@ -155,7 +155,7 @@ router.post('/unlinkfbacct', cors(corsOptions), (req, res) => {
     PFInitPost(req, '/unlinkfbacct');
 
     // Send
-    PlayFabClient.LinkFacebookAccount(req.body, (err, data) => {
+    PlayFabClient.UnlinkFacebookAccount(req.body, (err, data) => {
         PFGenericCallback(res, err, data);
     });
 });
