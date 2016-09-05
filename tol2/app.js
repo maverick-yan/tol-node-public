@@ -28,7 +28,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ROUTES >>
 app.use('/', publicRoutes);
 app.use('/playfab', playfab);
-//app.use('/mailchimp', mailchimp);
+app.use('/mailchimp', mailchimp);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
