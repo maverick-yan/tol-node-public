@@ -6,6 +6,7 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var publicRoutes = require('./routes/index');
 var playfab = require('./routes/playfab');
+var mailchimp = require('./routes/mailchimp');
 //var cors = require('cors');
 
 var app = express();
@@ -24,8 +25,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ROUTES >>
 app.use('/', publicRoutes);
 app.use('/playfab', playfab);
+//app.use('/mailchimp', mailchimp);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

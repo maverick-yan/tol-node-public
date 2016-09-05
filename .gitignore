@@ -1,5 +1,5 @@
 DEADJOE
-node_modules/*
+tol2/node_modules/*
 *.csv
 *secret-keys.json
 *.save
