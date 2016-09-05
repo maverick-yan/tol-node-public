@@ -86,6 +86,16 @@ function MCGenericCallback(res, err, data) {
 //	}, callback)
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// CALLBACK
+var callback = function (err, result) {
+  if (err) {
+    console.log('error', err);
+  }
+  console.log(result);
+  process.exit(0);
+}
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // REGISTER
 router.post('/register', cors(corsOptions), (req, res) => {
     // Init
@@ -95,61 +105,24 @@ router.post('/register', cors(corsOptions), (req, res) => {
 
     // Send MC Request
 	mailchimp.request({
-	  method : 'post',
-	  path : '/lists/f5951a907e/members'
-	  path_params : {
-		//"email_address": email,
-		"EMAIL": email,
-		"UNAME": 
-		//"unique_email_id": "",
-		//"email_type": "",
-		//"status": "",
-		//"status_if_new": "",
-		//"merge_fields": {},
-		//"interests": {},
-		//"stats": {},
-		//"ip_signup": "",
-		//"timestamp_signup": "",
-		//"ip_opt": "",
-		//"timestamp_opt": "",
-		//"member_rating": "",
-		//"last_changed": "",
-		//"language": "",
-		//"vip": "",
-		//"email_client": "",
-		//"location": {
-		//	"latitude": "",
-		//	"longitude": ""
-		//},
-		//"last_note": {
-		//	"note_id": "",
-		//	"created_at": "",
-		//	"created_by": "",
-		//	"note": ""
-		//},
-		//"list_id": "",
-		//"_links": ""
-	  }
+		method : 'post',
+		path : '/lists/f5951a907e/members',
+		path_params : {}
+	}
 	  body : {
-		//body parameters, see mailchimp documentation for each call
+		"email_address": email,
+		"email_type": "html",
+		"status": "pending",
+		"merge_fields": {
+			"EMAIL": email,
+			"UNAME": username
 	  },
-	  query : {
-		//query string parameters, see mailchimp documentation for each call
-	  }
 	}, callback)
 });
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // VERIFY THAT EMAIL EXISTS
-router.post('/verifyemail', cors(corsOptions), (req, res) => {
-    // Init
-    MCInitPost(req, '/verifyemail');
-
-    // Send
-    PlayFabClient.LoginWithPlayFab(req.body, (err, data) => {
-        PFGenericCallback(res, err, data);
-    });
-});
+// TODO
 
 
 // ...........................................................................................
