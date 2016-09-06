@@ -1,5 +1,5 @@
 #tol-node-public (TNP)
-<img src="https://i.imgur.com/V6hcAXd.png"><br>
+<img src="https://i.imgur.com/NYmM7It.png"><br>
 Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https://www.ThroneOfLies.com
 
 <img src="https://i.imgur.com/fHBNMx2.png">
