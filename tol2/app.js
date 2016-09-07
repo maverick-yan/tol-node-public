@@ -7,12 +7,8 @@ var bodyParser = require('body-parser');
 var publicRoutes = require('./routes/index');
 var playfab = require('./routes/playfab');
 var mailchimp = require('./routes/mailchimp');
-//var cors = require('cors');
 
 var app = express();
-
-// NOTE: CORS is individual per-route (to separate public vs private)
-//app.use( cors() );
 
 // Set template engine (NOTE: jade is now called 'pug')
 app.set('view engine', 'jade');
@@ -29,6 +25,26 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', publicRoutes);
 app.use('/playfab', playfab);
 app.use('/mailchimp', mailchimp);
+
+// 404 >>
+app.use(function(req, res, next){
+  res.status(404);
+
+  // respond with html page
+  if (req.accepts('html')) {
+    res.render('404', { url: req.url });
+    return;
+  }
+
+  // respond with json
+  if (req.accepts('json')) {
+    res.send({ error: 'Not found' });
+    return;
+  }
+
+  // default to plain-text. send()
+  res.type('txt').send('Not found');
+});
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

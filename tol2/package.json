@@ -23,7 +23,8 @@
     "jade": "~1.11.0",
     "mailchimp-api-v3": "^1.4.0",
     "morgan": "~1.7.0",
-    "nodemon": "^1.10.0",
-    "serve-favicon": "~2.3.0"
+    "nodemon": "^1.10.2",
+    "serve-favicon": "~2.3.0",
+    "type-of": "^2.0.1"
   }
 }
