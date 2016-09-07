@@ -23,8 +23,8 @@ var mailchimp = new Mailchimp(secretKeys['mcApiKey']);
 var i42ListId = secretKeys['i42ListId'];
 
 // GET - Test (root)
-router.get('/', cors(corsOptions), function(req, res, next) {
-    res.jsonp({status: 'ONLINE'});
+router.get('/', function(req, res, next) {
+    res.json({status: 'ONLINE'});
 });
 
 // Common console+logs for incoming POST for Mailchimp
@@ -33,7 +33,7 @@ function MCInitPost(req, routeName) {
     console.log( '\n' + GetDateTime() );
     console.log('####################################');
     console.log('[' + count + '] ToL: POST request to "' + routeName + '" ..');
-    console.log( '<< MC (REQ): ' + J(req.body, true) + '\n' );
+    console.log('<< MC (REQ): ' + J(req.body, true) + '\n');
     count++;
 }
 
@@ -75,7 +75,7 @@ var mcGenericCallback = function (err, data, req, res, customJson) {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // REGISTER
-router.get('/register', cors(corsOptions), (req, res) => {
+router.post('/register', cors(corsOptions), (req, res) => {
     // Init
     MCInitPost(req, '/register');
     var email = "dylanh724@gmail.com"; // TEST
@@ -101,7 +101,7 @@ router.get('/register', cors(corsOptions), (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // VERIFY EMAIL (if both exists + if verified)
-router.get('/verifyemail', cors(corsOptions), (req, res) => {
+router.post('/verifyemail', cors(corsOptions), (req, res) => {
     // Init
     MCInitPost(req, '/verifyemail');
     var email = "dylanh724@gmail.com"; // TEST
