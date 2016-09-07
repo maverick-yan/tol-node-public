@@ -78,10 +78,10 @@ var mcGenericCallback = function (err, data, req, res, customJson) {
 router.post('/register', cors(corsOptions), (req, res) => {
     // Init
     MCInitPost(req, '/register');
-    var email = "dylanh724@gmail.com"; // TEST
-    var username = "dylanh724"; // TEST
-    // var email = req.body["email"];
-    // var username = req.body["username"];
+    // var email = "dylanh724@gmail.com"; // TEST
+    // var username = "dylanh724"; // TEST
+    var email = req.body["email"];
+    var username = req.body["username"];
     var emailMd5 = GetMd5(email);
     var url = `/lists/${i42ListId}/members/${emailMd5}`;
 
@@ -104,8 +104,8 @@ router.post('/register', cors(corsOptions), (req, res) => {
 router.post('/verifyemail', cors(corsOptions), (req, res) => {
     // Init
     MCInitPost(req, '/verifyemail');
-    var email = "dylanh724@gmail.com"; // TEST
-    // var email = req.body["email"];
+    // var email = "dylanh724@gmail.com"; // TEST
+    var email = req.body["email"];
     var emailMd5 = GetMd5(email);
     var url = `/lists/${i42ListId}/members/${emailMd5}`;
 
