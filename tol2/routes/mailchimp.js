@@ -121,6 +121,7 @@ router.post('/verifyemail', cors(corsOptions), (req, res) => {
             // Generic callback with custom json
             console.log('SUCCESS');
             var customJson = {
+                "code": 200,
                 "email_address": data['email_address'],
                 "status": data['status'],
                 "username": data['merge_fields']['UNAME'],
