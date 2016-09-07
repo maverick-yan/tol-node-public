@@ -61,13 +61,13 @@ var mcGenericCallback = function (err, data, req, res, customJson) {
         console.log(J(data));
         if (!customJson && data && data['statusCode'] == 200)
             res.json({
-                "statusCode": 200,
+                "code": 200,
                 "msg": "Success"
             });
         else if (customJson)
             res.json(customJson);
         else res.json({
-            "statusCode": 520,
+            "code": 520,
             "msg": "Unknown Error"
         });
     }
@@ -121,6 +121,7 @@ router.post('/verifyemail', cors(corsOptions), (req, res) => {
             // Generic callback with custom json
             console.log('SUCCESS');
             var customJson = {
+                "code": 200,
                 "email_address": data['email_address'],
                 "status": data['status'],
                 "username": data['merge_fields']['UNAME'],
