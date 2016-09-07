@@ -9,6 +9,7 @@
     "dev": "nodemon server.js",
     "forever": "sudo forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o .logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
     "foreverDebug": "sudo DEBUG=express:* forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o .logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
+    "restart": "sudo npm run kill && sudo npm run forever",
     "kill": "killall -9 node"
   },
   "dependencies": {

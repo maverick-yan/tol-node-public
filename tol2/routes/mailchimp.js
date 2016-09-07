@@ -22,7 +22,7 @@ var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 var mailchimp = new Mailchimp(secretKeys['mcApiKey']);
 var i42ListId = secretKeys['i42ListId'];
 
-// GET - Test (root)
+// GET - Test (root) - no CORS
 router.get('/', function(req, res, next) {
     res.json({status: 'ONLINE'});
 });
@@ -61,13 +61,13 @@ var mcGenericCallback = function (err, data, req, res, customJson) {
         console.log(J(data));
         if (!customJson && data && data['statusCode'] == 200)
             res.json({
-                "statusCode": 200,
+                "code": 200,
                 "msg": "Success"
             });
         else if (customJson)
             res.json(customJson);
         else res.json({
-            "statusCode": 520,
+            "code": 520,
             "msg": "Unknown Error"
         });
     }
@@ -78,8 +78,8 @@ var mcGenericCallback = function (err, data, req, res, customJson) {
 router.post('/register', cors(corsOptions), (req, res) => {
     // Init
     MCInitPost(req, '/register');
-    // var email = "dylanh724@gmail.com"; // TEST
-    // var username = "dylanh724"; // TEST
+    //var email = "dylanh724@gmail.com"; // TEST
+    //var username = "dylanh724"; // TEST
     var email = req.body["email"];
     var username = req.body["username"];
     var emailMd5 = GetMd5(email);
@@ -104,7 +104,7 @@ router.post('/register', cors(corsOptions), (req, res) => {
 router.post('/verifyemail', cors(corsOptions), (req, res) => {
     // Init
     MCInitPost(req, '/verifyemail');
-    // var email = "dylanh724@gmail.com"; // TEST
+    //var email = "dylanh724@gmail.com"; // TEST
     var email = req.body["email"];
     var emailMd5 = GetMd5(email);
     var url = `/lists/${i42ListId}/members/${emailMd5}`;
