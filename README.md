@@ -1,4 +1,6 @@
 #tol-node-public (TNP)
+>> TODO: Revamp this README -- too many features have been flowing in, so the original doc requires a revamp. Soon.
+
 <img src="https://i.imgur.com/NYmM7It.png"><br>
 Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https://www.ThroneOfLies.com
 
