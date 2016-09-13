@@ -101,6 +101,19 @@ router.post('/loginwithemail', cors(corsOptions), (req, res) => {
 });
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// https://api.playfab.com/Documentation/Client/method/SendAccountRecoveryEmail
+// Forces an email to be sent to the registered email address for the user's account, with a link allowing the user to change the password
+router.post('/sendacctrecoveryemail', cors(corsOptions), (req, res) => {
+    // Init
+    PFInitPost(req, '/sendacctrecoveryemail');
+
+    // Send
+    PlayFabClient.SendAccountRecoveryEmail(req.body, (err, data) => {
+        PFGenericCallback(res, err, data);
+    });
+});
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/GetAccountInfo
 router.post('/getacctinfo', cors(corsOptions), (req, res) => {
     // Init
