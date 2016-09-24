@@ -1,4 +1,5 @@
 DEADJOE
+*.sublime*
 tol2/node_modules/*
 *.csv
 *secret-keys.json

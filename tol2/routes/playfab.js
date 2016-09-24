@@ -106,6 +106,10 @@ router.post('/loginwithemail', cors(corsOptions), (req, res) => {
 router.post('/sendacctrecoveryemail', cors(corsOptions), (req, res) => {
     // Init
     PFInitPost(req, '/sendacctrecoveryemail');
+    
+    // Inject TitleId
+    req.body["TitleId"] = pfTitleId;
+    console.log(":: Injected TitleId :: " + req.body);
 
     // Send
     PlayFabClient.SendAccountRecoveryEmail(req.body, (err, data) => {
