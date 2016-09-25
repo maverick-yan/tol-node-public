@@ -13,7 +13,7 @@ API Originally made for Throne of Lies: The Online Game of Lies and Deceit @ htt
 1. Edit "rename_me_to_secret-keys.json" file in `/tol2/data/` and replace placeholder values.
 2. Rename "rename_me_to_secret-keys.json" to "secret-keys.json" and fill in your secret keys (remember the key names)
 3. SSL/TLS (https) is required: Copy your `cert.pem` and `key.pem` files to `/tol2/ssl/`
-4. Navigate to **/tol2/** and type `sudo npm install --save` to install the req's `/tol/2node_modules/` dir)
+4. Navigate to **/tol2/** and type `sudo npm install --save` to install the req's `/tol2/node_modules/` dir)
 
 ## Scripts:
 `package.json` comes with two "dev" scripts - run via `npm run <script_name>`:
