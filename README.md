@@ -2,7 +2,7 @@
 
 <img src="https://i.imgur.com/NYmM7It.png"><br>
 
-* This is a Node.js+Express.js REST API, PlayFab (BaaS) wrapper, and Mailchimp wrapper with MVC architecture.
+* <span style="color:red;">This is a Node.js+Express.js REST API, PlayFab (BaaS) wrapper, and Mailchimp wrapper with MVC architecture.</span>
 * There are premade templates for common calls, including authentication.
 * Premade script not found? Simply copy+paste a template from another call and rename it to the correct call: Done.
 * There are also some experiments in regards to handling CSV (such as CD keys) and other relevant tasks.
