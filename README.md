@@ -67,10 +67,9 @@ router.post('/register', cors(corsOptions), (req, res) => {
 ## Disclaimer:
 * This is a template/wrapper for PlayFab with some experiments of other useful/relevant features.
 * This repo may or may not be updated/monitored by me. If you want authority for pull requests and I've been slack, let me know~
-* No need to credit me, but if you did, I'd toss you a +1 coder's karma :D
 
 ## Like what you see?
-Support my game @ https://www.ThroneOfLies.com and I'll call that a thanks ;)
+Support my game and I'll call that a thanks ;)
 
 ## License
 MIT
