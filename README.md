@@ -1,7 +1,6 @@
 #tol-node-public (TNP) - for game developers
-
-<img src="https://i.imgur.com/NYmM7It.png"><br>
 API Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https://www.ThroneOfLies.com
+<img src="https://i.imgur.com/NYmM7It.png"><br>
 
 * This is a Node.js+Express.js REST API, PlayFab (BaaS) wrapper, and Mailchimp wrapper with MVC architecture.
 * There are premade templates for common calls, including authentication.
