@@ -1,40 +1,68 @@
-#tol-node-public (TNP)
-**TODO: Revamp this README -- too many features have been flowing in, so the original doc is messy - my apologies!*
+#tol-node-public (TNP) - for game developers
 
 <img src="https://i.imgur.com/NYmM7It.png"><br>
-Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https://www.ThroneOfLies.com
+API Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https://www.ThroneOfLies.com
 
-<img src="https://i.imgur.com/fHBNMx2.png">
-
-* This is a Node.js wrapper to a game developer's BaaS: PlayFab.
-* This is a template/wrapper: Almost anything within PlayFab can be called/returned within 6 lines of code. You can customize this and add your own.
-* Copy+Paste a block of PlayFab code to use it for another call, and simply rename the call.
+* This is a Node.js+Express.js REST API, PlayFab (BaaS) wrapper, and Mailchimp wrapper with MVC architecture.
+* There are premade templates for common calls, including authentication.
+* Premade script not found? Simply copy+paste a template from another call and rename it to the correct call: Done.
 * There are also some experiments in regards to handling CSV (such as CD keys) and other relevant tasks.
 * Now with MailChimp support! Surely more to come.
 
 ## PreReqs:
-1. Edit "rename_me_to_secret-keys.json" file in /tol/data/ and replace placeholder values.
-2. Rename "rename_me_to_secret-keys.json" to "secret-keys.json"
-3. SSL (https) is required: Copy your `cert.pem` and `key.pem` SSL/TLS files to /tol/ssl/
-4. Go to **/tol2/** and type `sudo npm install --save` to install the req's (**node_modules/** dir)
-
-## Hint:
-If you don't have SSL (https), you probably shouldn't be making API calls anyway :)
-It's worth the Google search -- it will take you just a couple days to get used to it.
-You may have to spend ~$10/year for a legit SSL certificate that's not self-signed.
+1. Edit "rename_me_to_secret-keys.json" file in `/tol2/data/` and replace placeholder values.
+2. Rename "rename_me_to_secret-keys.json" to "secret-keys.json" and fill in your secret keys (remember the key names)
+3. SSL/TLS (https) is required: Copy your `cert.pem` and `key.pem` files to `/tol2/ssl/`
+4. Navigate to **/tol2/** and type `sudo npm install --save` to install the req's `/tol/2node_modules/` dir)
 
 ## Scripts:
-`package.json` comes with two scripts:
+`package.json` comes with two "dev" scripts - run via `npm run <script_name>`:
 
 1. `forever` - type `sudo npm run forever` to run forever+nodemon together to keep your app going and restart on changes, automatically.
-
 2. `kill` - type `sudo npm run kill` to kill forever+nodemon.
+3. `restart` - calls npm `kill`, then npm `forever`
 
-## PlayFab Examples:
-Coming Soon
+## PlayFab Example:
+`/tol2/routes/playfab.js`
+```
+// https://api.playfab.com/Documentation/Client/method/LoginWithPlayFab
+router.post('/loginwithpf', cors(corsOptions), (req, res) => {
+    // Init
+    PFInitPost(req, '/loginwithpf');
 
-## Mailchimp Examples:
-Coming Soon
+    // Send
+    PlayFabClient.LoginWithPlayFab(req.body, (err, data) => {
+        PFGenericCallback(res, err, data);
+    });
+});
+```
+
+## Mailchimp Example:
+`/tol2/routes/mailchimp.js`
+```
+// REGISTER
+router.post('/register', cors(corsOptions), (req, res) => {
+    // Init
+    MCInitPost(req, '/register');
+    var email = req.body["email"];
+    var username = req.body["username"];
+    var emailMd5 = GetMd5(email);
+    var url = `/lists/${i42ListId}/members/${emailMd5}`;
+
+    console.log("MC: PUT >> " + url);
+    mailchimp.put(url, {
+        "email_address": email,
+        "status": "pending",
+        "merge_fields": {
+            "EMAIL": email,
+            "UNAME": username
+        }
+    }, (err, data) => {
+        // Generic callback + res
+        mcGenericCallback(err, data, req, res);
+    });
+});
+```
 
 ## Disclaimer:
 * This is a template/wrapper for PlayFab with some experiments of other useful/relevant features.
@@ -43,3 +71,6 @@ Coming Soon
 
 ## Like what you see?
 Support my game @ https://www.ThroneOfLies.com and I'll call that a thanks ;)
+
+## License
+MIT
