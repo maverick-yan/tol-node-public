@@ -3,6 +3,8 @@ var fs = require('fs');
 var cors = require('cors');
 var crypto = require('crypto');
 var theType = require('type-of');
+var nodemailer = require('nodemailer');
+var sparkPostTransport = require('nodemailer-sparkpost-transport');
 var Mailchimp = require('mailchimp-api-v3');
 var express = require('express');
 var router = express.Router();
@@ -30,10 +32,10 @@ router.get('/', function(req, res, next) {
 
 // Common console+logs for incoming POST for Mailchimp
 var count = 0; // TODO: Get from db
-function MCInitPost(req, routeName) {
+function MCInitLog(req, routeName) {
     console.log( '\n' + GetDateTime() );
     console.log('####################################');
-    console.log('[' + count + '] ToL: POST request to "' + routeName + '" ..');
+    console.log('[' + count + '] ToL: request to "' + 'mailchimp' + routeName + '" ..');
     console.log( '<< MC (REQ): ' + J(req.body, true) + '\n' );
     count++;
 }
@@ -43,9 +45,9 @@ function MCInitPost(req, routeName) {
 // Mailchimp SDK : API Calls
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-// CALLBACK
-var mcGenericCallback = function (err, data, req, res, customJson) {
-    console.log("<< MC Callback");
+// CALLBACK (Don't use this for webhooks)
+var mcGenericCallback = function (err, data, req, res, customJson, routeName) {
+    console.log('<< MC Callback (mailchimp' + routeName  + ')');
     if (err) {
         console.log('**MC: ERR >> ', J(err));
         var errStatusCode = 520 // Unknown fallback
@@ -78,20 +80,22 @@ var mcGenericCallback = function (err, data, req, res, customJson) {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // WEBHOOK : Subscribe - Send a notification email to admin(s)
 router.get('/webhook/subscribe', (req, res) => {
-	res.sendStatus(200);
-}
+    MCInitLog(req, '/webhook/subscribe');
+    res.sendStatus(200);
+});
 
 router.post('/webhook/subscribe', (req, res) => {
-	var email = req.body["data"]["email"];
-	console.log(email)
-	res.sendStatus(200);
-}
+    MCInitLog(req, '/webhook/subscribe');
+    var email = req.body["data"]["email"];	
+    console.log(email)
+    res.sendStatus(200);
+});
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // REGISTER
 router.post('/register', cors(corsOptions), (req, res) => {
     // Init
-    MCInitPost(req, '/register');
+    MCInitLog(req, '/register');
     //var email = "dylanh724@gmail.com"; // TEST
     //var username = "dylanh724"; // TEST
     var email = req.body["email"];
@@ -101,15 +105,22 @@ router.post('/register', cors(corsOptions), (req, res) => {
 
     console.log("MC: PUT >> " + url);
     mailchimp.put(url, {
-        "email_address": email,
-        "status": "pending",
-        "merge_fields": {
-            "EMAIL": email,
-            "UNAME": username
-        }
+       "email_address": email,
+       "status": "pending",
+       "merge_fields": {
+           "EMAIL": email,
+           "UNAME": username
+       }
     }, (err, data) => {
-        // Generic callback + res
-        mcGenericCallback(err, data, req, res);
+       // Generic callback + res
+       mcGenericCallback(err, data, req, res, null, '/register');
+        
+       // == POST-RES ==
+       // Get # of subscribers
+       MCGetListStatus( (memberCount) => {
+           // Email admins with signup notification + updated # of subscribers (null res is only for GET test)
+           SparkEmailSignupNotification(email, null, memberCount, username);
+        });
     });
 });
 
@@ -117,35 +128,111 @@ router.post('/register', cors(corsOptions), (req, res) => {
 // VERIFY EMAIL (if both exists + if verified)
 router.post('/verifyemail', cors(corsOptions), (req, res) => {
     // Init
-    MCInitPost(req, '/verifyemail');
+    MCInitLog(req, '/verifyemail');
     //var email = "dylanh724@gmail.com"; // TEST
     var email = req.body["email"];
     var emailMd5 = GetMd5(email);
     var url = `/lists/${i42ListId}/members/${emailMd5}`;
 
-    console.log("MC: GET >> " + url);
+    console.log('MC: GET >> ' + url);
     mailchimp.get(url, {
         "email_address": email,
     }, (err, data) => {
         // Custom callback
         if (err) {
-            console.log('ERR');
-            mcGenericCallback(err, data, req, res);
+            console.log('[MC] **ERR @ "/verifyemail" callback:' + err);
+            mcGenericCallback(err, data, req, res, null, '/verifyemail');
         } else {
             // Generic callback with custom json
             console.log('SUCCESS');
             var customJson = {
                 "code": 200,
-                "email_address": data['email_address'],
-                "status": data['status'],
-                "username": data['merge_fields']['UNAME'],
-                "timestamp_signup": data['timestamp_signup'],
-                "timestamp_opt": data['timestamp_opt']
+                "email_address": data["email_address"],
+                "status": data["status"],
+                "username": data["merge_fields"]["UNAME"],
+                "timestamp_signup": data["timestamp_signup"],
+                "timestamp_opt": data["timestamp_opt"]
             };
-            mcGenericCallback(err, data, req, res, customJson);    
+            mcGenericCallback(err, data, req, res, customJson, '/verifyemail');            
         }
     });
 });
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// GET LIST STATUS (such as member_count)
+function MCGetListStatus(callback) {
+    console.log('[MC] Getting list status..');
+    
+    var url = `/lists/${i42ListId}`;    
+    console.log('MC: GET >> ' + url);
+    mailchimp.get(url, {
+        // Only auth is needed (auto)
+    }, (err, data) => {
+        if (err)
+            console.log('[MC] **ERR @ "/verifyemail" callback: ' + err);        
+        else {
+            var status = data["stats"];
+            var memberCount = status["member_count"];
+            console.log("[MC] Member Count: " + memberCount);
+            if ( callback && typeof(callback) == "function" )
+                callback(memberCount);
+        }
+    });
+}
+
+// ...........................................................................................
+// SPARKPOST : with nodemailer >>
+//
+// SPARK :  Init
+var sparkSecret = secretKeys['sparkPostApiKey'];
+var adminEmails = secretKeys['adminEmails']; // []
+console.log(adminEmails);
+
+// create reusable transporter object using the default SMTP transport 
+var options = {
+    sparkPostApiKey: sparkSecret // Stored @ /tol2/data/secret-keys.json
+    //campaign_id: 'optional',
+    //metadata: 'optional',
+    //options: 'optional'
+};
+var transporter = nodemailer.createTransport( sparkPostTransport(options) );
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// SPARK : Test GET - Send an email to your admins with a test subscriber
+router.get('/spark/test', (req, res) => {
+    MCInitLog(req, '/spark/test');
+    
+    // Get # of subscribers
+    MCGetListStatus( (memberCount) => {
+        // Email admins with signup notification + updated # of subscribers
+        SparkEmailSignupNotification("newTestSubscriber@gmail.com", res, memberCount, "testUsername");
+    });
+});
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// SPARK : Send email to the admins (Username is a "merge_fields" custom MC field)
+function SparkEmailSignupNotification(email, res, memberCount, username) {
+    console.log('Sending signup notification email to admins..');
+    
+    transporter.sendMail({
+        from: '"Imperium42" <noreply@imperium42.com>',
+        to: adminEmails, // []
+        subject: '[MC] +1 Subscriber (' + email + ') >> ' + memberCount + ' members!',
+        text: 'Username: ' + username  + ' ~ Rock on, i42!',
+        html: '<span style="font-weight:bold;">Username: </span>' + username + '<br><br>Rock On, i42!'
+    }, (err, info) => {
+        if (err) {
+            var errSend = '[MC] **ERR @ SparkEmailSignupNotification: ' + J(err);
+            console.log(errSend);
+            if (res) 
+                res.send(errSend);
+        } else {
+            console.log( '[Spark] Success: ' + J(info) );
+            if (res)
+                res.send('Success (' + info["accepted"]  + ')!')
+        }
+    });
+}
 
 // ...........................................................................................
 // Email to md5
