@@ -20,6 +20,7 @@ var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 
 // Mailchimp init
 var mailchimp = new Mailchimp(secretKeys['mcApiKey']);
+var email = secretKeys['email'];
 var i42ListId = secretKeys['i42ListId'];
 
 // GET - Test (root) - no CORS
@@ -71,6 +72,19 @@ var mcGenericCallback = function (err, data, req, res, customJson) {
             "msg": "Unknown Error"
         });
     }
+
+}
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// WEBHOOK : Subscribe - Send a notification email to admin(s)
+router.get('/webhook/subscribe', (req, res) => {
+	res.sendStatus(200);
+}
+
+router.post('/webhook/subscribe', (req, res) => {
+	var email = req.body["data"]["email"];
+	console.log(email)
+	res.sendStatus(200);
 }
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
