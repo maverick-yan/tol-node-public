@@ -1,4 +1,4 @@
-// routes/mailchimp.js
+// routes/mailer.js
 var fs = require('fs');
 var cors = require('cors');
 var crypto = require('crypto');
@@ -199,20 +199,85 @@ var transporter = nodemailer.createTransport( sparkPostTransport(options) );
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // SPARK : Test GET - Send an email to your admins with a test subscriber
-router.get('/spark/test', (req, res) => {
-    MCInitLog(req, '/spark/test');
-    
-    // Get # of subscribers
-    MCGetListStatus( (memberCount) => {
-        // Email admins with signup notification + updated # of subscribers
-        SparkEmailSignupNotification("newTestSubscriber@gmail.com", res, memberCount, "testUsername");
-    });
+//router.get('/spark/test', (req, res) => {
+//    MCInitLog(req, '/spark/test');
+//    
+//    // Get # of subscribers
+//    MCGetListStatus( (memberCount) => {
+//        // Email admins with signup notification + updated # of subscribers
+//        SparkEmailSignupNotification("newTestSubscriber@gmail.com", res, memberCount, "testUsername");
+//    });
+//});
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// SPARK : Test GET - Send a custom email
+//router.get('/spark/customtest', (req, res) => {
+//    MCInitLog(req, '/spark/customtest');
+//
+//    // Get params
+//    var emailTo = req.query.emailTo;
+//    var emailSubj = req.query.emailSubj;
+//    var emailBodyHtml = req.query.emailBodyHtml;
+//    
+//    // Logs
+//    console.log(`emailTo: ${emailTo} / emailSubj: ${emailSubj} / emailBodyHtml: ${emailBodyHtml}`);
+//    
+//    // Send now
+//    SparkSendEmail(emailTo, emailSubj, emailBodyHtml, res);
+//});
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// SPARK : POST - Send a custom email
+router.post('/spark/sendemail', cors(corsOptions), (req, res) => {
+    MCInitLog(req, '/spark/sendemail');
+
+    // Get params
+    var emailTo = req.body.emailTo;
+    var emailSubj = req.body.emailSubj;
+    var emailBodyHtml = req.body.emailBodyHtml;
+
+    // Logs
+    console.log(`emailTo: ${emailTo} / emailSubj: ${emailSubj} / emailBodyHtml: ${emailBodyHtml}`);
+
+    // Send now
+    SparkSendEmail(emailTo, emailSubj, emailBodyHtml, res);
 });
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// SPARK : Send a custom email to a user
+function SparkSendEmail(emailTo, emailSubj, emailBodyHtml, res) {
+    console.log('[Spark] Sending custom email..');
+
+    transporter.sendMail({
+        from: '"Imperium42" <noreply@imperium42.com>',
+        to: emailTo, // []
+        subject: emailSubj,
+        //text: 'This is plaintext only - use html for now since our gamers will 99% use html',
+        html: emailBodyHtml
+    }, (err, info) => {
+        if (err) {
+            var errSend = '[MC] **ERR @ SparkSendEmail: ' + J(err);
+            console.log(errSend);
+            if (res)
+                res.send(errSend);
+        } else {
+            console.log( '[Spark] Success: ' + J(info) );
+            if (res)
+            {
+                var jsonRes = {
+                    "success": true
+                };
+                res.json(jsonRes);
+            }
+        }
+    });
+}
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // SPARK : Send email to the admins (Username is a "merge_fields" custom MC field)
+// TODO: Utilize SparkSendEmail()
 function SparkEmailSignupNotification(email, res, memberCount, username) {
-    console.log('Sending signup notification email to admins..');
+    console.log('[Spark] Sending signup notification email to admins..');
     
     transporter.sendMail({
         from: '"Imperium42" <noreply@imperium42.com>',
