@@ -6,7 +6,7 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var publicRoutes = require('./routes/index');
 var playfab = require('./routes/playfab');
-var mailchimp = require('./routes/mailchimp');
+var mailer = require('./routes/mailer');
 
 var app = express();
 
@@ -24,7 +24,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ROUTES >>
 app.use('/', publicRoutes);
 app.use('/playfab', playfab);
-app.use('/mailchimp', mailchimp);
+app.use('/mailer', mailer);
 
 // 404 >>
 app.use(function(req, res, next){
