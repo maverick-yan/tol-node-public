@@ -117,6 +117,20 @@ router.post('/sendacctrecoveryemail', cors(corsOptions), (req, res) => {
     });
 });
 
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// https://api.playfab.com/Documentation/Client/method/GetCatalogItems
+router.post('/getcatalogitems', cors(corsOptions), (req, res) => {
+    // Init
+    PFInitPost(req, '/getcatalogitems');
+
+    // Send
+    PlayFabClient.GetCatalogItems(req.body, (err, data) => {
+        PFGenericCallback(res, err, data);
+    });
+});
+
+
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // https://api.playfab.com/Documentation/Client/method/GetAccountInfo
 router.post('/getacctinfo', cors(corsOptions), (req, res) => {
