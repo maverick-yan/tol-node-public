@@ -9,7 +9,7 @@
 * Premade script not found? Simply copy+paste a template from another call and rename it to the correct call: Done.
 * There are also some experiments in regards to handling CSV (such as CD keys) and other relevant tasks.
 * Now with MailChimp support! Surely more to come.
-* API Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https://www.ThroneOfLies.com
+* API Originally made for Throne of Lies: The Online Game of Lies and Deceit @ https://api.ThroneOfLies.com for https://www.ThroneOfLies.com
 
 ## PreReqs:
 1. Edit "rename_me_to_secret-keys.json" file in `/tol2/data/` and replace placeholder values.
