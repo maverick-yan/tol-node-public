@@ -223,7 +223,7 @@ function J(obj, pretty) {
     return JSON.stringify(obj); // js obj >> json    
   else        
     return JSON.stringify(obj, null, 2); // Better for logs+humans
-  }
+}
     
 // Simple date for logs
 function GetDateTime() {

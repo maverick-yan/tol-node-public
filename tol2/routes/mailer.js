@@ -1,6 +1,8 @@
 // routes/mailer.js
 var fs = require('fs');
 var cors = require('cors');
+var path = require('path');
+var settings = require('settings');
 var crypto = require('crypto');
 var theType = require('type-of');
 var nodemailer = require('nodemailer');
@@ -298,6 +300,67 @@ function SparkEmailSignupNotification(email, res, memberCount, username) {
         }
     });
 }
+
+
+// ...........................................................................
+// SPARK : GET : Test preview of the view
+router.get('/itemRedeemed', (req, res) => {
+    MCInitLog(req, '/itemRedeemed');
+
+    // GET params
+    var reqEmail = req.query.email || 'dylan@imperium42.com';
+    var reqName = req.query.itemName || 'Test item name';
+    var reqDescr = req.query.itemDescr || 'Test item description';
+    var reqImg = req.query.itemImg || 'http://icons.veryicon.com/256/System/Kameleon/Cheese.png';
+    var reqCount = req.query.itemCount || 1;
+    var reqUser = req.query.username || 'Noble';
+
+    // Render the html from a template
+    //var htmlPath = settings.PROJECT_DIR + '/views/itemRedeemed.jade';
+    res.render('itemRedeemed', {
+        itemName: reqName,
+        itemDescr: reqDescr,
+        itemImg: reqImg,
+        itemCount: reqCount,
+        username: reqUser
+    });
+});
+
+
+// ...........................................................................
+// SPARK : POST : Send an item redeemed email >>
+router.post('/spark/itemRedeemed', cors(corsOptions), (req, res) => {
+    MCInitLog(req, '/spark/itemRedeemed');
+    
+    // GET params
+    var reqEmail = req.body.email
+    var reqName = req.body.itemName;
+    var reqDescr = req.body.itemDescr;
+    var reqImg = req.body.itemImg;
+    var reqCount = req.body.itemCount || 1;
+    var reqUser = req.body.username || 'Noble';
+    
+    // Render the html from a template
+    //var htmlPath = settings.PROJECT_DIR + '/views/itemRedeemed.jade';
+    res.render('itemRedeemed', {
+        itemName: reqName,
+        itemDescr: reqDescr,
+        itemImg: reqImg,
+        itemCount: reqCount,
+        username: reqUser
+    }, function(err, html) {
+        // Fail
+        if (err)
+            res.send('Failed to create item email render');
+        
+        // Success >> Send an email with this html!
+        var subj = '[ToL] New item redeemed on your account!';
+        SparkSendEmail(reqEmail, subj, html, res); // Res will send json "success": true
+        
+        // Done - send the html back in case they wanted it
+        //res.send(html);
+    });
+});
 
 // ...........................................................................................
 // Email to md5
