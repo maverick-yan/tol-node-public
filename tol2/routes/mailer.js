@@ -98,6 +98,7 @@ router.post('/webhook/subscribe', (req, res) => {
 router.post('/register', cors(corsOptions), (req, res) => {
     // Init
     MCInitLog(req, '/register');
+
     //var email = "dylanh724@gmail.com"; // TEST
     //var username = "dylanh724"; // TEST
     var email = req.body["email"];
@@ -110,10 +111,10 @@ router.post('/register', cors(corsOptions), (req, res) => {
     console.log("MC: PUT >> " + url);
     
     // If forgotPass, don't include null values and it will JUST send a new activation email
-    var data = {};
+    var reqData = {};
     if (!resendOnly) {
         // Include all data
-        data = {
+        reqData = {
             "email_address": email,
             "status": "pending",
             "merge_fields": {
@@ -124,17 +125,19 @@ router.post('/register', cors(corsOptions), (req, res) => {
         };
     } else {
         // Include only email
-        data = {
+        reqData = {
             "email_address": email
         };
     }
     
-    mailchimp.put(url, data), (err, data) => {
+    console.log( "[MC] Sending >> " + J(reqData) );
+    mailchimp.put(url, reqData), (err, data) => {
        // Generic callback + res
        mcGenericCallback(err, data, req, res, null, '/register');
         
        // == POST-RES ==
        // Get # of subscribers
+       console.log('Getting list of members to email admin(s)..');
        MCGetListStatus( (memberCount) => {
            // Email admins with signup notification + updated # of subscribers (null res is only for GET test)
            SparkEmailSignupNotification(email, null, memberCount, username, src);
@@ -147,7 +150,7 @@ router.post('/register', cors(corsOptions), (req, res) => {
 router.post('/verifyemail', cors(corsOptions), (req, res) => {
     // Init
     MCInitLog(req, '/verifyemail');
-    //var email = "dylanh724@gmail.com"; // TEST
+
     var email = req.body["email"];
     var emailMd5 = GetMd5(email);
     var url = `/lists/${i42ListId}/members/${emailMd5}`;
