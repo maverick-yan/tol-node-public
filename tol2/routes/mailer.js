@@ -103,6 +103,7 @@ router.post('/register', cors(corsOptions), (req, res) => {
     var email = req.body["email"];
     var username = req.body["username"];
     var emailMd5 = GetMd5(email);
+    var src = req.body["src"];
     var url = `/lists/${i42ListId}/members/${emailMd5}`;
 
     console.log("MC: PUT >> " + url);
@@ -111,7 +112,8 @@ router.post('/register', cors(corsOptions), (req, res) => {
        "status": "pending",
        "merge_fields": {
            "EMAIL": email,
-           "UNAME": username
+           "UNAME": username,
+           "SRC": src
        }
     }, (err, data) => {
        // Generic callback + res
@@ -121,7 +123,7 @@ router.post('/register', cors(corsOptions), (req, res) => {
        // Get # of subscribers
        MCGetListStatus( (memberCount) => {
            // Email admins with signup notification + updated # of subscribers (null res is only for GET test)
-           SparkEmailSignupNotification(email, null, memberCount, username);
+           SparkEmailSignupNotification(email, null, memberCount, username, src);
         });
     });
 });
@@ -152,6 +154,7 @@ router.post('/verifyemail', cors(corsOptions), (req, res) => {
                 "email_address": data["email_address"],
                 "status": data["status"],
                 "username": data["merge_fields"]["UNAME"],
+                "src": data["merge_fields"]["SRC"],
                 "timestamp_signup": data["timestamp_signup"],
                 "timestamp_opt": data["timestamp_opt"]
             };
@@ -278,13 +281,13 @@ function SparkSendEmail(emailTo, emailSubj, emailBodyHtml, res) {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // SPARK : Send email to the admins (Username is a "merge_fields" custom MC field)
 // TODO: Utilize SparkSendEmail()
-function SparkEmailSignupNotification(email, res, memberCount, username) {
+function SparkEmailSignupNotification(email, res, memberCount, username, src) {
     console.log('[Spark] Sending signup notification email to admins..');
     
     transporter.sendMail({
         from: '"Imperium42" <noreply@imperium42.com>',
         to: adminEmails, // []
-        subject: '[MC] +1 Subscriber (' + email + ') >> ' + memberCount + ' members!',
+        subject: '[MC] +1 Subscriber (' + email + ') >> ' + memberCount + ' members (from ' + src + ')!',
         text: 'Username: ' + username  + ' ~ Rock on, i42!',
         html: '<span style="font-weight:bold;">Username: </span>' + username + '<br><br>Rock On, i42!'
     }, (err, info) => {
