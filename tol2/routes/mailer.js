@@ -104,18 +104,32 @@ router.post('/register', cors(corsOptions), (req, res) => {
     var username = req.body["username"];
     var emailMd5 = GetMd5(email);
     var src = req.body["src"];
+    var resendOnly = req.body["resendOnly"];
     var url = `/lists/${i42ListId}/members/${emailMd5}`;
 
     console.log("MC: PUT >> " + url);
-    mailchimp.put(url, {
-       "email_address": email,
-       "status": "pending",
-       "merge_fields": {
-           "EMAIL": email,
-           "UNAME": username,
-           "SRC": src
-       }
-    }, (err, data) => {
+    
+    // If forgotPass, don't include null values and it will JUST send a new activation email
+    var data = {};
+    if (!resendOnly) {
+        // Include all data
+        data = {
+            "email_address": email,
+            "status": "pending",
+            "merge_fields": {
+                "EMAIL": email,
+                "UNAME": username,
+                "SRC": src
+            }
+        };
+    } else {
+        // Include only email
+        data = {
+            "email_address": email
+        };
+    }
+    
+    mailchimp.put(url, data), (err, data) => {
        // Generic callback + res
        mcGenericCallback(err, data, req, res, null, '/register');
         
@@ -125,7 +139,7 @@ router.post('/register', cors(corsOptions), (req, res) => {
            // Email admins with signup notification + updated # of subscribers (null res is only for GET test)
            SparkEmailSignupNotification(email, null, memberCount, username, src);
         });
-    });
+    };
 });
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
