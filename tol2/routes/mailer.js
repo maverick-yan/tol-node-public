@@ -98,51 +98,48 @@ router.post('/webhook/subscribe', (req, res) => {
 router.post('/register', cors(corsOptions), (req, res) => {
     // Init
     MCInitLog(req, '/register');
-
     //var email = "dylanh724@gmail.com"; // TEST
     //var username = "dylanh724"; // TEST
     var email = req.body["email"];
     var username = req.body["username"];
     var emailMd5 = GetMd5(email);
     var src = req.body["src"];
-    var resendOnly = req.body["resendOnly"];
+    var resend = req.body["resend"];
     var url = `/lists/${i42ListId}/members/${emailMd5}`;
 
-    console.log("MC: PUT >> " + url);
-    
-    // If forgotPass, don't include null values and it will JUST send a new activation email
-    var reqData = {};
-    if (!resendOnly) {
-        // Include all data
-        reqData = {
-            "email_address": email,
-            "status": "pending",
-            "merge_fields": {
-                "EMAIL": email,
-                "UNAME": username,
-                "SRC": src
-            }
+    // Use limited data if only resending confirmation email to prevent null overrides
+    var mcData = {};
+    if (!resend) {
+        // Register normally
+        mcData = {
+           "email_address": email,
+           "status": "pending",
+           "merge_fields": {
+               "EMAIL": email,
+               "UNAME": username,
+               "SRC": src
+           }
         };
     } else {
-        // Include only email
-        reqData = {
+        // Only register with email to re-send the confirmation/activation email
+        mcData = {
             "email_address": email
         };
     }
-    
-    console.log( "[MC] Sending >> " + J(reqData) );
-    mailchimp.put(url, reqData), (err, data) => {
+   
+    console.log("MC: Sending " + mcData);
+    console.log("MC: PUT >> " + url);
+    mailchimp.put(url, mcData, (err, data) => {
        // Generic callback + res
        mcGenericCallback(err, data, req, res, null, '/register');
         
        // == POST-RES ==
        // Get # of subscribers
-       console.log('Getting list of members to email admin(s)..');
        MCGetListStatus( (memberCount) => {
            // Email admins with signup notification + updated # of subscribers (null res is only for GET test)
            SparkEmailSignupNotification(email, null, memberCount, username, src);
         });
-    };
+    });
 });
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -150,7 +147,7 @@ router.post('/register', cors(corsOptions), (req, res) => {
 router.post('/verifyemail', cors(corsOptions), (req, res) => {
     // Init
     MCInitLog(req, '/verifyemail');
-
+    //var email = "dylanh724@gmail.com"; // TEST
     var email = req.body["email"];
     var emailMd5 = GetMd5(email);
     var url = `/lists/${i42ListId}/members/${emailMd5}`;
