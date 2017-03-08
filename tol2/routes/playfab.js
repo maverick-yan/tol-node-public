@@ -2,11 +2,12 @@
 // routes/playfab.js
 var fs = require('fs');
 var cors = require('cors');
-var PlayFabClient = require('../playfab-node/PlayFabClient.js'); // PlayFab BaaS SDK
+var PlayFabClient = require('./scripts/playfab-node/PlayFabClient');
+var PlayFabAdmin = require('./scripts/playfab-node/PlayFabAdmin');
 var express = require('express');
 var router = express.Router();
 var tolCommon = require('./scripts/tolCommon');
-//var tolPlayfab = require('./scripts/tolPlayFab');
+var tolMailer = require('./mailer');
 
 // cors
 var whitelist = ['https://throneoflies.com', 'https://www.throneoflies.com'];
@@ -228,5 +229,11 @@ router.post('/getuserinv', cors(corsOptions), (req, res) => {
         PFGenericCallback(res, err, data);
     });
 });
+
+// #####################################################################################
+// PF ADMIN >>
+
+// https://api.playfab.com/Documentation/Admin/method/GetPlayersInSegment
+//router.post('/
 
 module.exports = router;
