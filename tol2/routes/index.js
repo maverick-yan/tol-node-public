@@ -11,7 +11,7 @@ var router = express.Router();
 
 // cors
 var corsOptions = {
-  origin: 'https://api.mysite.com/'
+  origin: 'https://api.throneoflies.com/'
 };
 router.use(cors());
 

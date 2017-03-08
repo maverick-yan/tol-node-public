@@ -1,4 +1,4 @@
-// routes/mailer.js
+// @routes/mailer.js
 var fs = require('fs');
 var cors = require('cors');
 var path = require('path');
@@ -10,6 +10,7 @@ var sparkPostTransport = require('nodemailer-sparkpost-transport');
 var Mailchimp = require('mailchimp-api-v3');
 var express = require('express');
 var router = express.Router();
+var tolCommon = require('./scripts/tolCommon');
 
 // cors
 var whitelist = ['https://throneoflies.com', 'https://www.throneoflies.com'];
@@ -29,10 +30,11 @@ var i42ListId = secretKeys['i42ListId'];
 
 // GET - Test (root) - no CORS
 router.get('/', function(req, res, next) {
+    tolCommon.InitLog(req, "/", 'GET');
     res.json({status: 'ONLINE'});
 });
 
-// Common console+logs for incoming POST for Mailchimp
+// [DEPRECATED] Common console+logs for incoming POST for Mailchimp
 var count = 0; // TODO: Get from db
 function MCInitLog(req, routeName) {
     console.log( '\n' + GetDateTime() );
@@ -41,7 +43,6 @@ function MCInitLog(req, routeName) {
     console.log( '<< MC (REQ): ' + J(req.body, true) + '\n' );
     count++;
 }
-
 
 // ..........................................................................................
 // Mailchimp SDK : API Calls
@@ -76,18 +77,17 @@ var mcGenericCallback = function (err, data, req, res, customJson, routeName) {
             "msg": "Unknown Error"
         });
     }
-
 }
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // WEBHOOK : Subscribe - Send a notification email to admin(s)
 router.get('/webhook/subscribe', (req, res) => {
-    MCInitLog(req, '/webhook/subscribe');
+    tolCommon.InitLog(req, '/webhook/subscribe', 'GET');
     res.sendStatus(200);
 });
 
 router.post('/webhook/subscribe', (req, res) => {
-    MCInitLog(req, '/webhook/subscribe');
+    tolCommon.InitLog(req, '/webhook/subscribe', 'POST');
     var email = req.body["data"]["email"];	
     console.log(email)
     res.sendStatus(200);
@@ -97,7 +97,7 @@ router.post('/webhook/subscribe', (req, res) => {
 // REGISTER
 router.post('/register', cors(corsOptions), (req, res) => {
     // Init
-    MCInitLog(req, '/register');
+    tolCommon.InitLog(req, '/register', 'POST');
     //var email = "dylanh724@gmail.com"; // TEST
     //var username = "dylanh724"; // TEST
     var email = req.body["email"];
@@ -146,7 +146,7 @@ router.post('/register', cors(corsOptions), (req, res) => {
 // VERIFY EMAIL (if both exists + if verified)
 router.post('/verifyemail', cors(corsOptions), (req, res) => {
     // Init
-    MCInitLog(req, '/verifyemail');
+    tolCommon.InitLog(req, '/verifyemail', 'POST');
     //var email = "dylanh724@gmail.com"; // TEST
     var email = req.body["email"];
     var emailMd5 = GetMd5(email);
@@ -248,7 +248,7 @@ var transporter = nodemailer.createTransport( sparkPostTransport(options) );
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // SPARK : POST - Send a custom email
 router.post('/spark/sendemail', cors(corsOptions), (req, res) => {
-    MCInitLog(req, '/spark/sendemail');
+    tolCommon.InitLog(req, '/spark/sendemail', 'POST');
 
     // Get params
     var emailTo = req.body.emailTo;
@@ -322,7 +322,7 @@ function SparkEmailSignupNotification(email, res, memberCount, username, src) {
 // ...........................................................................
 // SPARK : GET : Test preview of the view
 router.get('/itemRedeemed', (req, res) => {
-    MCInitLog(req, '/itemRedeemed');
+    tolCommon.InitLog(req, '/itemRedeemed', 'POST');
 
     // GET params
     var reqEmail = req.query.email || 'dylan@imperium42.com';
@@ -347,7 +347,7 @@ router.get('/itemRedeemed', (req, res) => {
 // ...........................................................................
 // SPARK : POST : Send an item redeemed email >>
 router.post('/spark/itemRedeemed', cors(corsOptions), (req, res) => {
-    MCInitLog(req, '/spark/itemRedeemed');
+    tolCommonInitLog(req, '/spark/itemRedeemed', 'POST');
     
     // GET params
     var reqEmail = req.body.email
