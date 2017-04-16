@@ -1,5 +1,5 @@
 // ...........................................................................................
-// routes/playfab.js
+// routes/discourse.js
 var fs = require('fs');
 var cors = require('cors');
 var PlayFabClient = require('./scripts/playfab-node/PlayFabClient');
@@ -10,7 +10,7 @@ var tolCommon = require('./scripts/tolCommon');
 var tolMailer = require('./mailer');
 
 // cors
-var whitelist = ['https://throneoflies.com', 'https://www.throneoflies.com'];
+var whitelist = ['https://throneoflies.com', 'https://www.throneoflies.com', 'https://forum.imperium42.com'];
 var corsOptions = {
   origin: whitelist,
   optionsSuccessStatus: 200

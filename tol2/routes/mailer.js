@@ -80,7 +80,7 @@ var mcGenericCallback = function (err, data, req, res, customJson, routeName) {
 }
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-// WEBHOOK : Subscribe - Send a notification email to admin(s)
+// [NOT WORKING] WEBHOOK : Subscribe - Send a notification email to admin(s)
 router.get('/webhook/subscribe', (req, res) => {
     tolCommon.InitLog(req, '/webhook/subscribe', 'GET');
     res.sendStatus(200);
@@ -127,7 +127,7 @@ router.post('/register', cors(corsOptions), (req, res) => {
         };
     }
    
-    console.log("MC: Sending " + mcData);
+    console.log("MC: Sending " + tolCommon.J(mcData));
     console.log("MC: PUT >> " + url);
     mailchimp.put(url, mcData, (err, data) => {
        // Generic callback + res
