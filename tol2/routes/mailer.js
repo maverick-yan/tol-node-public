@@ -27,11 +27,12 @@ var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 var mailchimp = new Mailchimp(secretKeys['mcApiKey']);
 var email = secretKeys['email'];
 var i42ListId = secretKeys['i42ListId'];
+var vetStatusSegmentId = '1417361';
 
 // GET - Test (root) - no CORS
 router.get('/', function(req, res, next) {
-    tolCommon.InitLog(req, "/", 'GET');
-    res.json({status: 'ONLINE'});
+    tolCommon.InitLog(req, "/", 'GET');    
+    res.json({ status: 'ONLINE' });
 });
 
 // [DEPRECATED] Common console+logs for incoming POST for Mailchimp
@@ -53,14 +54,32 @@ var mcGenericCallback = function (err, data, req, res, customJson, routeName) {
     console.log('<< MC Callback (mailchimp' + routeName  + ')');
     if (err) {
         console.log('**MC: ERR >> ', J(err));
+        
+        // Set status code
         var errStatusCode = 520 // Unknown fallback
         if (err['status'] && theType(err['status'] == 'number'))
             errStatusCode = err['status'];
         res.status(errStatusCode);
+        
+        // Change to custom status code, if any
+        if (customJson.status || customJson.code)
+            res.status(customJson.Status || customJson.code);
+
+        // Prep to return json err
         if (req.accepts('json'))
-            res.json(err);
+        {
+            if (customJson)
+                res.json(customJson);
+            else
+                res.json(err);
+        }
         else
-            res.type('txt').send(J(err));
+        {
+            if (customJson)
+                res.type('txt').send(J(customJson));
+            else
+                res.type('txt').send(J(err));
+        }
     } else {
         // Success
         console.log("MC: SUCCESS >>");
@@ -143,37 +162,124 @@ router.post('/register', cors(corsOptions), (req, res) => {
 });
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// GET: Veteran Status Verify Form
+router.get('/veteran', (req, res, next) =>
+{
+    res.render('form',
+    {
+        title: 'Confirm Veteran Status',
+        form: 'veteran'
+    });
+});
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// POST: VERIFY VETERAN STATUS VIA MC SEGMENT
+router.post('/veteran', cors(corsOptions), (req, res) =>
+{
+    // Init
+    tolCommon.InitLog(req, '/veteran', 'POST');
+    var email = req.body["email"];
+    //var email = req.query.email;
+
+    MCGetUserByEmail(email, (mcErr) =>
+    {
+        console.log('[MC] **ERR @ "/veteran" callback:' + mcErr);
+        
+        var customJson = {};
+        
+        var code = mcErr.status;
+        var reason = "Unknown - Check requirements @ https://tol.wikia.com/VeteranStatus";
+        if (code == 400)
+            reason = "Either registered after 9/7/2016, didn't confirm email address, unsubscribed, " +
+            "or didn't pass the 'real email' test. More info @ https://tol.wikia.com/VeteranStatus";
+        else if (code == 404)
+            reason = "Not even registered in our system O__o"; 
+        
+        if (code != 405)
+        {
+            // Fail >>
+            var customJson =
+            {
+                "code": code,
+                "isVeteran": false,
+                "reason": reason
+            };
+            mcGenericCallback(mcErr, null, req, res, customJson, '/veteran');
+        }
+        else
+        {
+            // SUCCESS (because it's technically not a real call) >>
+            // Generic callback with custom json
+            var customJson =
+            {
+                "code": 200,
+                "isVeteran": true,
+            };
+            mcGenericCallback(null, mcErr, req, res, customJson, '/veteran');
+        }            
+    }, (data) =>
+    {
+        // ** ERR 405 IS ACTUALLY SUCCESS, SO SUCCESS IS ACTUALLY @ ERR **
+    },
+    vetStatusSegmentId);
+});
+
+
+// ......................................................................
+// GET mailchimp user by email
+function MCGetUserByEmail(email, errCallback, resCallback, customSegment)
+{
+    var emailMd5 = GetMd5(email);
+
+    var url = `/lists/${i42ListId}/members/${emailMd5}`;
+    if (customSegment)
+        url = `/lists/${i42ListId}/segments/${customSegment}/members/${emailMd5}`;
+        
+    var req = { "email_address": email };    
+    console.log('MC: GET >> ' + url);
+    
+    mailchimp.get(url, req, (mcErr, mcData) =>
+    {
+        // Custom callback
+        if (mcErr)
+        {
+            console.log('[MC] **ERR @ "/verifyemail (MCGetUserByEmail)" callback:' + mcErr);
+            errCallback(mcErr);
+        } else
+        {
+            // Generic callback with custom json
+            console.log('[MC] SUCCESS @ MCGetUserByEmail');
+            resCallback(mcData);
+        }
+    });
+}
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // VERIFY EMAIL (if both exists + if verified)
-router.post('/verifyemail', cors(corsOptions), (req, res) => {
+router.post('/verifyemail', cors(corsOptions), (req, res) => 
+{
     // Init
     tolCommon.InitLog(req, '/verifyemail', 'POST');
-    //var email = "dylanh724@gmail.com"; // TEST
     var email = req.body["email"];
-    var emailMd5 = GetMd5(email);
-    var url = `/lists/${i42ListId}/members/${emailMd5}`;
 
-    console.log('MC: GET >> ' + url);
-    mailchimp.get(url, {
-        "email_address": email,
-    }, (err, data) => {
-        // Custom callback
-        if (err) {
-            console.log('[MC] **ERR @ "/verifyemail" callback:' + err);
-            mcGenericCallback(err, data, req, res, null, '/verifyemail');
-        } else {
-            // Generic callback with custom json
-            console.log('SUCCESS');
-            var customJson = {
-                "code": 200,
-                "email_address": data["email_address"],
-                "status": data["status"],
-                "username": data["merge_fields"]["UNAME"],
-                "src": data["merge_fields"]["SRC"],
-                "timestamp_signup": data["timestamp_signup"],
-                "timestamp_opt": data["timestamp_opt"]
-            };
-            mcGenericCallback(err, data, req, res, customJson, '/verifyemail');            
-        }
+    MCGetUserByEmail(email, (mcErr) =>
+    {
+        console.log('[MC] **ERR @ "/verifyemail" callback:' + mcErr);
+        mcGenericCallback(mcErr, null, req, res, null, '/verifyemail');
+    }, (data) =>
+    {
+        // Generic callback with custom json
+        var customJson = 
+        {
+            "code": 200,
+            "email_address": data["email_address"],
+            "status": data["status"],
+            "username": data["merge_fields"]["UNAME"],
+            "src": data["merge_fields"]["SRC"],
+            "timestamp_signup": data["timestamp_signup"],
+            "timestamp_opt": data["timestamp_opt"]
+        };
+        mcGenericCallback(null, data, req, res, customJson, '/verifyemail');        
     });
 });
 

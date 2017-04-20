@@ -17,6 +17,21 @@ exports.GetDateTime = function() {
 }
 
 // ...........................................................................................
+// Get IP from req header
+exports.getIP = function(req) {
+      var ipInfo =
+        //req.connection.remoteAddress ||
+        //req.socket.remoteAddress ||
+        //req.connection.socket.remoteAddress ||
+        //req.headers['x-cluster-client-ip'] ||
+        req.headers['x-real-ip'] ||
+        req.headers['x-forwarded-for'];
+
+        console.log(ipInfo);
+        return ipInfo;
+}
+
+// ...........................................................................................
 // Common console+logs for incoming POST for PlayFab
 exports.InitLog = function(req, routeName, httpType) {
   console.log( '\n' + this.GetDateTime() );
