@@ -7,6 +7,8 @@ var bodyParser = require('body-parser');
 var publicRoutes = require('./routes/index');
 var playfab = require('./routes/playfab');
 var mailer = require('./routes/mailer');
+var stripe = require('./routes/stripe');
+//var discourse = require('./routes/discourse');
 var myViews = require('./routes/views');
 
 var app = express();
@@ -26,6 +28,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', publicRoutes);
 app.use('/playfab', playfab);
 app.use('/mailer', mailer);
+app.use('/stripe', stripe);
+//app.use('/discourse', discourse);
 app.use('/views', myViews); 
 
 // 404 >>
