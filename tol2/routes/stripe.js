@@ -32,7 +32,8 @@ var products =
     shortName: 'game',
     productName: 'Throne of Lies (Game)',
     productDescription: '1x Steam Key (Alpha+ Access)',
-    productPrice: 9.99
+    productPriceHuman: 9.99,
+    productPrice: 999
   }
 ];
 
@@ -55,11 +56,17 @@ router.get('/charge/:name', cors(corsOptions), function(req, res)
 // POST - Process charge, then show results
 router.post('/charge/:name', cors(corsOptions), function(req, res)
 {
-  var productName = req.params.name;
-  var stripeToken = req.body.stripeToken;
+  console.log( '[Stripe] params == ' + tolCommon.J(req.params) );
+  console.log( '[Stripe] body == ' + tolCommon.J(req.body) );
 
-  console.log(req.body);  
-  
+  var productName = req.params.name; 			// "game"
+  var stripeToken = req.body.stripeToken; 		// <nonce>
+  var stripeTokenType = req.body.stripeTokenType; 	// "card"
+  var email = req.body.stripeEmail;			// "you@you.com" (pre-validated)
+  var ref = req.body.ref;				// "skimm"
+  var src = req.body.src;				// "throneoflies.com"
+
+
   console.log(`@ /charge/${productName} GET`);
   var product = getProduct(productName);
 
@@ -68,8 +75,8 @@ router.post('/charge/:name', cors(corsOptions), function(req, res)
     return res.status(500).send('Product does not exist.');
     
   // Success >>
-  var email = 'dylanh724@gmail.com';
-  var result = chargeCust(res, email);
+  var amt = product.productPrice;
+  var result = chargeCust(res, email, stripeToken, amt, ref, src);
 });
 
 // ...........................................................................................
@@ -127,7 +134,7 @@ stripeShippingAddressCity
 stripeShippingAddressCountry	Shipping address details (if enabled)
 */
 //function chargeCust(custEmail, cardExpMonth, cardExpYear, cardNum, cardCVC, amt, currency)
-function chargeCust(res, custEmail)
+function chargeCust(res, custEmail, stripeToken, amt, ref, src)
 {
   console.log('@ chargeCust: ' + custEmail);
 
@@ -138,21 +145,28 @@ function chargeCust(res, custEmail)
   }).then(function(customer)
   {
     console.log('[Stripe-2] customer ==  ' + customer); 
-    return stripe.customers.createSource(customer.id, {
-      source: 
+    return stripe.customers.createSource(customer.id, 
+    {
+      source: stripeToken,
+      //{
+      //   object: 'card',
+      //   exp_month: 10,
+      //   exp_year: 2018,
+      //   number: '4242 4242 4242 4242',
+      //   cvc: 100
+      //}
+      metadata:
       {
-         object: 'card',
-         exp_month: 10,
-         exp_year: 2018,
-         number: '4242 4242 4242 4242',
-         cvc: 100
-       }
+        'ref': ref,
+        'src': src
+      }
     });
   }).then(function(source) 
   {
     console.log('[Stripe-3] source == ' + source);
     return stripe.charges.create({
-      amount: 1600,
+      //amount: 1600,
+      amount: amt,
       currency: 'usd',
       customer: source.customer
     });
