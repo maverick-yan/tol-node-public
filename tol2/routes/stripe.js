@@ -25,6 +25,17 @@ var liveSecret = secretKeys.stripeLiveSecret;
 var stripe = require('stripe')(testSecret);
 stripe.setTimeout(20000); // in ms (this is 20 seconds)
 
+// Stripe inventory
+var products =
+[
+  {
+    shortName: 'game',
+    productName: 'Throne of Lies (Game)',
+    productDescription: '1x Steam Key (Alpha+ Access)',
+    productPrice: 9.99
+  }
+];
+
 // ...........................................................................................
 // GET - Test (root)
 router.get('/', cors(corsOptions), function(req, res, next) 
@@ -33,14 +44,45 @@ router.get('/', cors(corsOptions), function(req, res, next)
 });
 
 // ...........................................................................................
-// POST - Test (root)
-router.get('/charge', cors(corsOptions), function(req, res, next)
+// GET - Test display product
+router.get('/charge/:name', cors(corsOptions), function(req, res)
 {
-  console.log('@ /charge GET');
-  
   var email = 'dylanh724@gmail.com';
   var result = chargeCust(res, email);
 });
+
+// ...........................................................................................
+// POST - Process charge, then show results
+router.post('/charge/:name', cors(corsOptions), function(req, res)
+{
+  var productName = req.params.name;
+  var stripeToken = req.body.stripeToken;
+
+  console.log(req.body);  
+  
+  console.log(`@ /charge/${productName} GET`);
+  var product = getProduct(productName);
+
+  // Validate product
+  if (!product)
+    return res.status(500).send('Product does not exist.');
+    
+  // Success >>
+  var email = 'dylanh724@gmail.com';
+  var result = chargeCust(res, email);
+});
+
+// ...........................................................................................
+function getProduct(productName)
+{
+  for (var i = 0; i < products.length; i++) 
+  {
+    if(productName === products[i].shortName)
+      return products[i];
+    else
+      return null;
+  }
+}
 
 // ...........................................................................................
 // Create a customer
