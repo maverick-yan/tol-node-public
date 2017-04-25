@@ -1,6 +1,6 @@
 var express = require('express');
-var path = require('path');
 var favicon = require('serve-favicon');
+var path = require('path');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
@@ -12,6 +12,9 @@ var stripe = require('./routes/stripe');
 var myViews = require('./routes/views');
 
 var app = express();
+
+// Favicon
+app.use(favicon(path.join(__dirname, 'public', 'images', 'favicon-256.png')));
 
 // Set template engine (NOTE: jade is now called 'pug')
 app.set('view engine', 'jade');

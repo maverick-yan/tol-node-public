@@ -31,9 +31,11 @@ var products =
   {
     shortName: 'game',
     productName: 'Throne of Lies (Game)',
-    productDescription: '1x Steam Key (Alpha+ Access)',
+    productDescription: 'Steam Key with Alpha+ Access',
+    productNoun: 'game key',
     productPriceHuman: 9.99,
-    productPrice: 999
+    productPrice: 999,
+    productImg: 'https://i.imgur.com/cH9OjNC.jpg'
   }
 ];
 
@@ -46,11 +48,31 @@ router.get('/', cors(corsOptions), function(req, res, next)
 
 // ...........................................................................................
 // GET - Test display product
-router.get('/charge/:name', cors(corsOptions), function(req, res)
+router.get('/charge/test', cors(corsOptions), function(req, res)
 {
-  var email = 'dylanh724@gmail.com';
-  var result = chargeCust(res, email);
+  var product = products[0];
+  var qty = 1;
+  var email = 'blah@blah.com';
+  
+  renderReceipt(product, qty, email, res);
 });
+
+
+// ...........................................................................................
+function renderReceipt(product, qty, email, res)
+{
+  res.render('receipt',
+  {
+    title: 'Successful Purchase | Throne of Lies (Imperium42)',
+    itemImg: product.productImg,
+    itemName: product.productName,
+    itemDescr: product.productDescription,
+    itemNoun: product.productNoun,
+    price: product.productPriceHuman,
+    qty: qty,
+    email: email
+  });  
+}
 
 // ...........................................................................................
 // POST - Process charge, then show results
@@ -66,7 +88,6 @@ router.post('/charge/:name', cors(corsOptions), function(req, res)
   var ref = req.body.ref;				// "skimm"
   var src = req.body.src;				// "throneoflies.com"
 
-
   console.log(`@ /charge/${productName} GET`);
   var product = getProduct(productName);
 
@@ -76,7 +97,8 @@ router.post('/charge/:name', cors(corsOptions), function(req, res)
     
   // Success >>
   var amt = product.productPrice;
-  var result = chargeCust(res, email, stripeToken, amt, ref, src);
+  var qty = 1;
+  var result = chargeCust(res, product, email, stripeToken, amt, qty, ref, src);
 });
 
 // ...........................................................................................
@@ -116,6 +138,21 @@ function getProduct(productName)
 //}
 
 // ...........................................................................................
+function generateMetadata(ref, src)
+{
+  var meta = 
+  {
+    'ref': ref,
+    'src': src
+  };
+  
+  console.log('[Stripe-Meta] ref == ' + ref);
+  console.log('[Stripe-Meta] src == ' + src);
+  
+  return meta;
+}
+
+// ...........................................................................................
 /* Create a new customer and then a new charge for that customer
 
 stripeToken			The ID of the token representing the payment details
@@ -134,32 +171,26 @@ stripeShippingAddressCity
 stripeShippingAddressCountry	Shipping address details (if enabled)
 */
 //function chargeCust(custEmail, cardExpMonth, cardExpYear, cardNum, cardCVC, amt, currency)
-function chargeCust(res, custEmail, stripeToken, amt, ref, src)
+function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src)
 {
-  console.log('@ chargeCust: ' + custEmail);
+  console.log('@ chargeCust');
 
+  var meta = generateMetadata(ref, src);
+  console.log('[Stripe] meta == ' + tolCommon.J(meta));
+  
   // Create a new customer and then a new charge for that customer:
-  console.log('[Stripe-1]');
+  console.log('[Stripe-1] email == ' + custEmail);
   stripe.customers.create({
-    email: 'foo-customer@example.com'
+    email: custEmail,
+    metadata: meta
   }).then(function(customer)
   {
     console.log('[Stripe-2] customer ==  ' + customer); 
     return stripe.customers.createSource(customer.id, 
     {
+      //source: generateMockSource(),
       source: stripeToken,
-      //{
-      //   object: 'card',
-      //   exp_month: 10,
-      //   exp_year: 2018,
-      //   number: '4242 4242 4242 4242',
-      //   cvc: 100
-      //}
-      metadata:
-      {
-        'ref': ref,
-        'src': src
-      }
+      metadata: meta
     });
   }).then(function(source) 
   {
@@ -168,13 +199,15 @@ function chargeCust(res, custEmail, stripeToken, amt, ref, src)
       //amount: 1600,
       amount: amt,
       currency: 'usd',
-      customer: source.customer
+      customer: source.customer,
+      metadata: meta
     });
   }).then(function(charge) 
   {
     // SUCCESS >> New charge created on a new customer
     console.log('[Stripe-4] Success! charge == ' + charge);
-    res.send(charge);
+    //res.send(charge);
+    renderReceipt(product, qty, custEmail, res);
   }).catch(function(err) 
   {
     // FAIL >>
@@ -184,7 +217,19 @@ function chargeCust(res, custEmail, stripeToken, amt, ref, src)
 }
 
 // ..........................................................................................
-
+function generateMockSource()
+{
+  var mockSrc =
+  {
+    object: 'card',
+    exp_month: 10,
+    exp_year: 2018,
+    number: '4242 4242 4242 4242',
+    cvc: 100
+  };
+  
+  return mockSrc;
+}
 
 // ..........................................................................................
 // Note: Node.js API does not throw exceptions, and instead prefers the

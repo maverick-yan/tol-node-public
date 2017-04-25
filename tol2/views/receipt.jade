@@ -1,0 +1,22 @@
+extends layout.jade
+block content
+  .productWrapper
+    block headerLogo
+    .product
+      img.productImg(src='#{itemImg}', alt='New Item')
+      div.productTxtWrapper
+        h2 #{itemName}
+        h5.productDescr
+          | #{itemDescr}
+  h2.greenTxt Success! $#{price} has been charged for: #{qty}x total #{itemNoun}s!
+  p
+    | We will email your Throne of Lies Steam code to (#{email}) as soon as we can.
+    | We keep an eye on orders coming in, and we will generate the Steam key(s) to send to you.
+    | This process will be automated in the future.
+  p
+    | While waiting, we invite you to our 
+    a(href='https://discord.gg/gvNbRSB' target='_blank') Discord
+    |  (Required for Alpha/Beta) and 
+    a(href='https://forum.imperium42.com' target='_blank') Forum
+    |  (Optional)
+script(src='/js/analytics-convert-999.js')

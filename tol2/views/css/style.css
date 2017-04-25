@@ -1,0 +1,39 @@
+a {
+    color: deepskyblue;
+}
+a:hover {
+    color: green;
+}
+.productWrapper {
+    padding: 1%; 
+    font-family: Arial, Helvetica;
+}
+.product {
+    background-color: #EFEFEF; 
+    height: 100px; 
+    border-radius: 5px;
+}
+.productImg {
+    padding: 5px; 
+    max-hight: 90px; 
+    height: 90px; 
+    border-radius: 15px; 
+    float: left;
+    padding: 5px; 
+    max-hight: 90px; 
+    height: 90px; 
+    border-radius: 15px; 
+    float: left;
+}
+.productTxtWrapper {
+    text-align: left; 
+    padding: 5px;
+}
+.greenTxt {
+    color: green;
+}
+.productDescr {
+    color: darkgrey; 
+    padding: 5px; 
+    margin-top: -25px;
+}
