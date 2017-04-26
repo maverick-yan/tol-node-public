@@ -22,7 +22,7 @@ var liveSecret = secretKeys.stripeLiveSecret;
 
 // Stripe setup
 // https://github.com/stripe/stripe-node
-var stripe = require('stripe')(testSecret);
+var stripe = require('stripe')(liveSecret);
 stripe.setTimeout(20000); // in ms (this is 20 seconds)
 
 // Stripe inventory
@@ -47,7 +47,7 @@ router.get('/', cors(corsOptions), function(req, res, next)
 });
 
 // ...........................................................................................
-// GET - Test display product
+// GET - Test display product receipt
 router.get('/charge/test', cors(corsOptions), function(req, res)
 {
   var product = products[0];
@@ -57,6 +57,33 @@ router.get('/charge/test', cors(corsOptions), function(req, res)
   renderReceipt(product, qty, email, res);
 });
 
+// ...........................................................................................
+// GET - Test display product receipt ERROR
+router.get('/charge/testErr', cors(corsOptions), function(req, res)
+{
+  //var product = products[0];
+  //var qty = 1;
+  //var email = 'blah@blah.com';
+
+  var err = 
+  {
+    type: 'StripeCardError',
+    message: 'This is a test error'
+  };
+
+  renderReceiptErr(err, res);
+});
+
+// ...........................................................................................
+function renderReceiptErr(err, res)
+{
+  res.render('receiptErr',
+  {
+    title: 'UNSUCCESSFUL Purchase | Throne of Lies (Imperium42)',
+    errMsg: err.message
+    //email: email
+  });
+}
 
 // ...........................................................................................
 function renderReceipt(product, qty, email, res)
@@ -212,7 +239,9 @@ function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src)
   {
     // FAIL >>
     console.log('[Stripe] ERR: ' + err);
-    res.status(err.code).send(err);
+    var errCode = err.code || 500;
+    //res.status(errCode).send(err);
+    renderReceiptErr(err, res);
   });
 }
 

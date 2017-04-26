@@ -32,6 +32,9 @@ a:hover {
 .greenTxt {
     color: green;
 }
+.redTxt {
+    color: red;
+}
 .productDescr {
     color: darkgrey; 
     padding: 5px; 
