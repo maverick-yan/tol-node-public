@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "debug": "DEBUG=express:* node ./bin/www",
+    "debug-old": "DEBUG=express:* node ./bin/www",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js",
+    "dev-old": "nodemon server.js",
+    "dev": "sudo DEBUG=express:* gulp",
     "forever": "sudo forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o .logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
     "foreverDebug": "sudo DEBUG=express:* forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o .logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
     "restart": "sudo npm run kill && sudo npm run forever",
