@@ -32,6 +32,11 @@
   },
   "devDependencies": {
     "forever": "^0.15.2",
-    "nodemon": "^1.10.2"
+    "gulp": "^3.9.1",
+    "gulp-livereload": "^3.8.1",
+    "gulp-nodemon": "^2.2.1",
+    "gulp-notify": "^3.0.0",
+    "nodemon": "^1.10.2",
+    "reload": "^1.1.2"
   }
 }

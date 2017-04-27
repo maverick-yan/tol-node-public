@@ -23,15 +23,25 @@ var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 // https://www.npmjs.com/package/discord-webhooks
 let stripeWebhook = new discordWebhook('https://discordapp.com/api/webhooks/306096637695229952/xgN-I4YumdLhGUv2mdpeCJwL-LVIMiEN1zT845AwjolzrwnWWPt4a0RDU_HC0t1XjAJY');
 
+// ...........................................................................................
+// GET: Discord test
+router.get('/', function(req, res) =>
+{
+    res.send('testt');
+});
+
+// ...........................................................................................
 // Discord test
-stripeWebhook.on("ready", () => {
+function discordTest()
+{
     myWebhook.execute({
         content:"Hello from a webhook",
         username:"Mr Webhook",
         avatar_url:"https://example.com/image.png"
     });
-});
+}
 
+// ...........................................................................................
 // Discord err handling
 myWebhook.on("error", (error) => {
   console.warn(error);
