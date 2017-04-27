@@ -1,7 +1,8 @@
 // ...........................................................................................
 // Misc Functions
 // Lazy JSON.Stringify() for pretty logs and debugging
-exports.J = function(obj, pretty) {
+exports.J = function(obj, pretty)
+{
   if (!pretty)
     return JSON.stringify(obj); // js obj >> json
   else
@@ -10,7 +11,8 @@ exports.J = function(obj, pretty) {
 
 // ...........................................................................................
 // Simple date for logs
-exports.GetDateTime = function() {
+exports.GetDateTime = function()
+{
   return new Date().toISOString()
     .replace(/T/, ' ') // replace T with a space
     .replace(/\..+/, ''); // delete the dot and everything after
@@ -18,7 +20,8 @@ exports.GetDateTime = function() {
 
 // ...........................................................................................
 // Get IP from req header
-exports.getIP = function(req) {
+exports.getIP = function(req)
+{
       var ipInfo =
         //req.connection.remoteAddress ||
         //req.socket.remoteAddress ||
@@ -33,7 +36,8 @@ exports.getIP = function(req) {
 
 // ...........................................................................................
 // Common console+logs for incoming POST for PlayFab
-exports.InitLog = function(req, routeName, httpType) {
+exports.InitLog = function(req, routeName, httpType)
+{
   console.log( '\n' + this.GetDateTime() );
   console.log('####################################');
   console.log(`[${httpType}] request to "${routeName}" ..`);

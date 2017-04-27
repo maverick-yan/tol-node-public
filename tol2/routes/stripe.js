@@ -147,6 +147,25 @@ function getProduct(productName)
 }
 
 // ...........................................................................................
+// Verifies webhooks, for example
+function verifyEvent(event_json, callback)
+{
+    // Retrieve the request's body and parse it as JSON
+    var event_json = JSON.parse(request.body);
+
+    // Verify the event by fetching it from Stripe
+    stripe.events.retrieve(event_json.id, (err, event) =>
+    {
+        if (err)
+            if (callback != null)
+                callback(false); // Fail
+        else
+            if (callback != null)
+                callback(true); // Success
+    });
+}
+
+// ...........................................................................................
 // Create a customer
 //function createCust(custEmail)
 //{
@@ -308,4 +327,8 @@ function handleErr(err)
     }
 }
 
-module.exports = router;
+// module.exports = router;
+module.exports =
+{
+    myRouter: router
+};

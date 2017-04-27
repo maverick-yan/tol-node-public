@@ -236,4 +236,8 @@ router.post('/getuserinv', cors(corsOptions), (req, res) => {
 // https://api.playfab.com/Documentation/Admin/method/GetPlayersInSegment
 //router.post('/
 
-module.exports = router;
+// module.exports = router;
+module.exports =
+{
+    myRouter: router
+};

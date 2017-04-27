@@ -28,14 +28,23 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ROUTES >>
+// ROUTES (Original) >>
 app.use('/', publicRoutes);
-app.use('/discord', discordView);
-app.use('/playfab', playfab);
-app.use('/mailer', mailer);
-app.use('/stripe', stripe);
-//app.use('/discourse', discourse);
-app.use('/views', myViews); 
+// app.use('/discord', discordView);
+// app.use('/playfab', playfab);
+// app.use('/mailer', mailer);
+// app.use('/stripe', stripe);
+// //app.use('/discourse', discourse);
+// app.use('/views', myViews);
+
+// ROUTES (route.router) >>
+// app.use('/', publicRoutes.router);
+// app.use('/discord', discordView.router);
+// app.use('/playfab', playfab.router);
+// app.use('/mailer', mailer.router);
+// app.use('/stripe', stripe.router);
+// //app.use('/discourse', discourse.router);
+// app.use('/views', myViews.router);
 
 // 404 >>
 app.use(function(req, res, next){
@@ -88,5 +97,8 @@ app.use(function(err, req, res, next) {
   });
 });
 
-
-module.exports = app;
+module.exports = router;
+// module.exports =
+// {
+//     router: router
+// };

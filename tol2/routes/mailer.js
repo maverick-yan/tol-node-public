@@ -510,4 +510,8 @@ function GetDateTime() {
     .replace(/\..+/, ''); // delete the dot and everything after
 }
 
-module.exports = router;
+// module.exports = router;
+module.exports =
+{
+    myRouter: router
+};

@@ -8,7 +8,7 @@ var publicRoutes = require('./routes/index');
 var playfab = require('./routes/playfab');
 var mailer = require('./routes/mailer');
 var stripe = require('./routes/stripe');
-//var discourse = require('./routes/discourse');
+//var discourse = require('./routes/discourse.router');
 var discordView = require('./routes/discord');
 var myViews = require('./routes/views');
 
@@ -29,13 +29,13 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ROUTES >>
-app.use('/', publicRoutes);
-app.use('/discord', discordView);
-app.use('/playfab', playfab);
-app.use('/mailer', mailer);
-app.use('/stripe', stripe);
-//app.use('/discourse', discourse);
-app.use('/views', myViews); 
+app.use('/', publicRoutes.myRouter);
+app.use('/discord', discordView.myRouter);
+app.use('/playfab', playfab.myRouter);
+app.use('/mailer', mailer.myRouter);
+app.use('/stripe', stripe.myRouter);
+//app.use('/discourse', discourse.myRouter);
+app.use('/views', myViews.myRouter);
 
 // 404 >>
 app.use(function(req, res, next){
@@ -90,3 +90,6 @@ app.use(function(err, req, res, next) {
 
 
 module.exports = app;
+//module.exports: {
+//  app: express()
+//}

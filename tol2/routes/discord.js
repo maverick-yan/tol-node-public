@@ -7,6 +7,8 @@ var router = express.Router();
 var tolCommon = require('./scripts/tolCommon');
 var tolMailer = require('./mailer');
 var request = require('request');
+// var rp = require('request-promise');
+var stripe = require('./stripe');
 
 // cors
 var whitelist =
@@ -82,8 +84,9 @@ var tolGuild =
 // GET: Discord test
 router.get('/webhook/', (req, res) =>
 {
-    discordTest(res);
-    // res.json({status: "ONLINE"});
+    //discordTest(res);
+    stripe.stripeTest();
+    res.json({status: "ONLINE"});
 });
 
 // ...........................................................................................
@@ -110,7 +113,7 @@ function handleWebhookErr(err, res, isTest)
         err.statusCode = err.statusCode;
 
     if (isTest)
-        res.setStatus(code).send(err);
+        res.status(code).send(err);
     else
         res.sendStatus(200); // We send back 200 no matter what
 }
@@ -151,8 +154,19 @@ function discordTest(res)
             handleWebhookErr(err, res, true);
 
         // Success >>
-        handleWebhookSuccess(discordRes, res, true);
+        handleWebhookSuccess(discordRes, res);
     });
+
+    // rp(options)
+    //     .then(function (parsedBody) {
+    //         console.log()
+    //         res.send(parsedBody);
+    //         // POST succeeded...
+    //     })
+    //     .catch(function (err) {
+    //         res.send(err);
+    //         // POST failed...
+    //     });
 
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Embeds Obj
@@ -205,4 +219,14 @@ router.post('/webhook/stripe', (req, res) =>
     });
 });
 
-module.exports = router;
+// function discordTest()
+// {
+//     console.log("discordTest");
+//     stripe.stripeTest();
+// }
+
+// module.exports = router;
+module.exports =
+{
+    myRouter: router
+};

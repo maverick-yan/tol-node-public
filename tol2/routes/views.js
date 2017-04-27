@@ -61,4 +61,8 @@ function J(obj, pretty) {
     return JSON.stringify(obj, null, 2); // Better for logs+humans
 }
 
-module.exports = router;
+// module.exports = router;
+module.exports =
+{
+    myRouter: router
+};
