@@ -8,8 +8,14 @@ var tolCommon = require('./scripts/tolCommon');
 var tolMailer = require('./mailer');
 
 // cors
-var whitelist = ['https://throneoflies.com', 'https://www.throneoflies.com, https://api.throneoflies.com'];
-var corsOptions = {
+var whitelist =
+[
+    'https://throneoflies.com',
+    'https://www.throneoflies.com',
+    'https://api.throneoflies.com'
+];
+var corsOptions =
+{
   origin: whitelist,
   optionsSuccessStatus: 200
 };
