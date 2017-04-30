@@ -22,24 +22,28 @@ exports.GetDateTime = function()
 // Get IP from req header
 exports.getIP = function(req)
 {
-      var ipInfo =
-        //req.connection.remoteAddress ||
-        //req.socket.remoteAddress ||
-        //req.connection.socket.remoteAddress ||
-        //req.headers['x-cluster-client-ip'] ||
-        req.headers['x-real-ip'] ||
-        req.headers['x-forwarded-for'];
+    var ipInfo =
+    //req.connection.remoteAddress ||
+    //req.socket.remoteAddress ||
+    //req.connection.socket.remoteAddress ||
+    //req.headers['x-cluster-client-ip'] ||
+    req.headers['x-real-ip'] ||
+    req.headers['x-forwarded-for'];
 
-        console.log(ipInfo);
-        return ipInfo;
+    console.log(ipInfo);
+    return ipInfo;
 }
 
 // ...........................................................................................
 // Common console+logs for incoming POST for PlayFab
 exports.InitLog = function(req, routeName, httpType)
 {
-  console.log( '\n' + this.GetDateTime() );
-  console.log('####################################');
-  console.log(`[${httpType}] request to "${routeName}" ..`);
-  console.log( '<< REQ: ' + this.J(req.body, true) + '\n' );
+    // Substitute sensitive data for random mask
+    if (req.Password !== null)
+        req.Password = "******";
+
+    console.log( '\n' + this.GetDateTime() );
+    console.log('####################################');
+    console.log(`[${httpType}] request to "${routeName}" ..`);
+    console.log( '<< REQ: ' + this.J(req.body, true) + '\n' );
 }

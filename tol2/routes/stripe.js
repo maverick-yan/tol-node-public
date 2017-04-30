@@ -148,20 +148,63 @@ function getProduct(productName)
 
 // ...........................................................................................
 // Verifies webhooks, for example
-function verifyEvent(event_json, callback)
+function getBalance()
 {
-    // Retrieve the request's body and parse it as JSON
-    var event_json = JSON.parse(request.body);
+    console.log('[STRIPE] @ getBalance');
 
-    // Verify the event by fetching it from Stripe
-    stripe.events.retrieve(event_json.id, (err, event) =>
+    return stripe.balance.retrieve()
+    .then((err, balance) =>
     {
         if (err)
-            if (callback != null)
-                callback(false); // Fail
+        {
+            console.log('[STRIPE] getbalance ERR: ' + tolCommon.J(err));
+            return Promise.reject(err);
+        }
         else
-            if (callback != null)
-                callback(true); // Success
+        {
+            console.log('[STRIPE] getbalance balance==' + balance);
+            return Promise.resolve(balance);
+        }
+    })
+    .catch((err) =>
+    {
+        console.log('[STRIPE-ERR] getBalance ERR: ' + tolCommon.J(err));
+        return Promise.reject(err); // REMOVE ME
+    });
+}
+
+// ...........................................................................................
+// Verifies webhooks, for example
+function verifyEvent(event_json, callback)
+{
+    console.log("[STRIPE] @ verifyEvent");
+    // Retrieve the request's body and parse it as JSON
+    // var event_json = JSON.parse(request.body);
+
+    // Verify the event by fetching it from Stripe
+    console.log("[STRIPE] Verifying event...");
+    return stripe.events.retrieve(event_json.id)
+    .then((err, event) =>
+    {
+        console.log("[STRIPE] Event verified==" + (err ? false : true));
+        if (err)
+        {
+            // Fail >>
+            console.log("[STRIPE] verifyEvent ERR: " + err);
+            resolve(false);
+            // resolve(event);
+        }
+        else
+        {
+            // Success >>
+            console.log("[STRIPE] verifyEvent success: " + event);
+            resolve(event);
+        }
+    })
+    .catch((err) =>
+    {
+        console.log("[STRIPE-ERR] ERR @ verifying event: " + err);
+        return false;
     });
 }
 
@@ -225,62 +268,62 @@ stripeShippingAddressCountry	Shipping address details (if enabled)
 //function chargeCust(custEmail, cardExpMonth, cardExpYear, cardNum, cardCVC, amt, currency)
 function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src)
 {
-  console.log('@ chargeCust');
+    console.log('[STRIPE] @ chargeCust');
 
-  var meta = generateMetadata(ref, src);
-  console.log('[Stripe] meta == ' + tolCommon.J(meta));
-  
-  // Create a new customer and then a new charge for that customer:
-  console.log('[Stripe-1] email == ' + custEmail);
-  stripe.customers.create({
+    var meta = generateMetadata(ref, src);
+    console.log('[Stripe] meta == ' + tolCommon.J(meta));
+
+    // Create a new customer and then a new charge for that customer:
+    console.log('[Stripe-1] email == ' + custEmail);
+    stripe.customers.create({
     email: custEmail,
     metadata: meta
-  }).then(function(customer)
-  {
-    console.log('[Stripe-2] customer ==  ' + customer); 
-    return stripe.customers.createSource(customer.id, 
+    }).then(function(customer)
     {
-      //source: generateMockSource(),
-      source: stripeToken,
-      metadata: meta
+        console.log('[Stripe-2] customer ==  ' + customer);
+        return stripe.customers.createSource(customer.id,
+    {
+        //source: generateMockSource(),
+        source: stripeToken,
+        metadata: meta
     });
-  }).then(function(source) 
-  {
+    }).then(function(source)
+    {
     console.log('[Stripe-3] source == ' + source);
     return stripe.charges.create({
-      //amount: 1600,
-      amount: amt,
-      currency: 'usd',
-      customer: source.customer,
-      metadata: meta
+        //amount: 1600,
+        amount: amt,
+        currency: 'usd',
+        customer: source.customer,
+        metadata: meta
     });
-  }).then(function(charge) 
-  {
-    // SUCCESS >> New charge created on a new customer
-    console.log('[Stripe-4] Success! charge == ' + charge);
-    //res.send(charge);
-    renderReceipt(product, qty, custEmail, res);
-  }).catch(function(err) 
-  {
-    // FAIL >>
-    console.log('[Stripe] ERR: ' + err);
-    var errCode = err.code || 500;
-    //res.status(errCode).send(err);
-    renderReceiptErr(err, res);
-  });
+    }).then(function(charge)
+    {
+        // SUCCESS >> New charge created on a new customer
+        console.log('[Stripe-4] Success! charge == ' + charge);
+        //res.send(charge);
+        renderReceipt(product, qty, custEmail, res);
+    }).catch(function(err)
+    {
+        // FAIL >>
+        console.log('[Stripe] ERR: ' + err);
+        var errCode = err.code || 500;
+        //res.status(errCode).send(err);
+        renderReceiptErr(err, res);
+    });
 }
 
 // ..........................................................................................
 function generateMockSource()
 {
-  var mockSrc =
-  {
-    object: 'card',
-    exp_month: 10,
-    exp_year: 2018,
-    number: '4242 4242 4242 4242',
-    cvc: 100
-  };
+    var mockSrc =
+    {
+        object: 'card',
+        exp_month: 10,
+        exp_year: 2018,
+        number: '4242 4242 4242 4242',
+        cvc: 100
+    };
   
   return mockSrc;
 }
@@ -330,5 +373,7 @@ function handleErr(err)
 // module.exports = router;
 module.exports =
 {
-    myRouter: router
+    myRouter: router,
+    stripeVerifyEvent: verifyEvent,
+    stripeGetBalance: getBalance
 };

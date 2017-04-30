@@ -4,13 +4,14 @@ var path = require('path');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var publicRoutes = require('./routes/index');
-var playfab = require('./routes/playfab');
-var mailer = require('./routes/mailer');
-var stripe = require('./routes/stripe');
-//var discourse = require('./routes/discourse.router');
-var discordView = require('./routes/discord');
-var myViews = require('./routes/views');
+var publicRoutes = require('./routes/index').myRouter;
+var myViews = require('./routes/views').myRouter;
+var playfab = require('./routes/playfab').myRouter;
+var mailer = require('./routes/mailer').myRouter;
+var stripe = require('./routes/stripe').myRouter;
+//var discourse = require('./routes/discourse').myRouter;
+var discordView = require('./routes/discord').myRouter;
+// var google = require('./routes/google').myRouter;
 
 var app = express();
 
@@ -29,13 +30,14 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ROUTES >>
-app.use('/', publicRoutes.myRouter);
-app.use('/discord', discordView.myRouter);
-app.use('/playfab', playfab.myRouter);
-app.use('/mailer', mailer.myRouter);
-app.use('/stripe', stripe.myRouter);
-//app.use('/discourse', discourse.myRouter);
-app.use('/views', myViews.myRouter);
+app.use('/', publicRoutes);
+app.use('/views', myViews);
+app.use('/discord', discordView);
+app.use('/playfab', playfab);
+app.use('/mailer', mailer);
+app.use('/stripe', stripe);
+// app.use('/google', google);
+//app.use('/discourse', discourse);
 
 // 404 >>
 app.use(function(req, res, next){
