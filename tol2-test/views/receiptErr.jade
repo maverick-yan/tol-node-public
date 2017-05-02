@@ -1,0 +1,12 @@
+extends layout.jade
+block content
+  block headerLogo
+  h2.redTxt Unsuccessful: You were NOT charged - #{errMsg}
+  p.redTxt
+    | This is likely an issue with your bank - it is suggested to contact them before trying again.
+  p
+    | Until then, we invite you to our 
+    a(href='https://discord.gg/gvNbRSB' target='_blank') Discord
+    |  (Required for Alpha/Beta) and 
+    a(href='https://forum.imperium42.com' target='_blank') Forum
+    |  (Optional)

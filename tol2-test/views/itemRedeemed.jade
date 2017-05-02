@@ -1,0 +1,14 @@
+extends layoutEmail.jade
+block content
+  div(style='padding: 1%; font-family: Arial, Helvetica;')
+    block headerLogo
+    div(style='background-color:#EFEFEF; height:100px; border-radius: 5px;')
+      img(src='#{itemImg}', alt='New Item', style='padding:5px; max-hight:90px; height:90px; border-radius:15px; float:left;')
+      div(style='text-align:left; padding:5px;')
+        h2 #{itemName}
+        h5(style='color:darkgrey; padding:5px; margin-top:-25px;')
+          | #{itemDescr}
+  h2(style='color:green;') #{username}, Good News: #{itemCount} New Item Granted to Your Account!
+  p
+    | View your inventory anytime by logging into either ToL the official site @ 
+    a(href='http://throneofli.es/game', style='color:deepskyblue;') ThroneOfLies.com

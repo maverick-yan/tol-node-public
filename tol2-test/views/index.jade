@@ -1,0 +1,10 @@
+extends layout
+
+block content
+  h1= title + ' (v0.02 BETA)'
+  p(style={color: 'navy'}) Welcome to #{title}: Throne of Lies API BETA. 
+    span(style='font-weight:bold') Public Routes:
+  ul#routes
+    li
+      a(href="./beta/mailer/veteran") Verify Veteran Status
+include signature

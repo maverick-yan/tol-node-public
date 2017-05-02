@@ -1,0 +1,47 @@
+{
+  "name": "tol2",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www",
+    "debug-old": "DEBUG=express:* node ./bin/www",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev-old": "nodemon server.js",
+    "dev": "sudo DEBUG=express:* gulp",
+    "forever": "sudo forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
+    "foreverDebug": "sudo DEBUG=express:* forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
+    "restart": "sudo npm run kill && sudo npm run forever",
+    "restart-debug": "sudo npm run kill && sudo npm run debug",
+    "kill": "killall -9 node"
+  },
+  "dependencies": {
+    "body-parser": "~1.16.1",
+    "cookie-parser": "~1.4.3",
+    "cors": "^2.8.0",
+    "cors-express": "^0.2.2",
+    "debug": "~2.6.1",
+    "dotenv": "^4.0.0",
+    "express": "~4.14.1",
+    "express-cors": "0.0.3",
+    "jade": "~1.11.0",
+    "mailchimp-api-v3": "^1.4.0",
+    "mongodb": "^2.2.26",
+    "morgan": "^1.8.1",
+    "nodemailer": "^3.1.3",
+    "nodemailer-sparkpost-transport": "^2.0.0",
+    "request": "^2.81.0",
+    "request-promise": "^4.2.0",
+    "serve-favicon": "~2.3.0",
+    "stripe": "^4.18.0",
+    "type-of": "^2.0.1"
+  },
+  "devDependencies": {
+    "forever": "^0.15.2",
+    "gulp": "^3.9.1",
+    "gulp-livereload": "^3.8.1",
+    "gulp-nodemon": "^2.2.1",
+    "gulp-notify": "^3.0.0",
+    "nodemon": "^1.10.2",
+    "reload": "^1.1.2"
+  }
+}

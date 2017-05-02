@@ -1,4 +1,5 @@
 DEADJOE
+.sublime*
 *.sublime*
 tol2/node_modules/*
 *.csv
