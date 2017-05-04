@@ -3,9 +3,11 @@
 var fs = require('fs');
 var cors = require('cors');
 var express = require('express');
+var mongodb = require('mongodb');
 var router = express.Router();
 var tolCommon = require('./scripts/tolCommon');
 var tolMailer = require('./mailer');
+var discord = require('./discord');
 
 // cors
 var whitelist =
@@ -21,14 +23,19 @@ var corsOptions =
 };
 router.options(whitelist, cors()); // include before other routes
 
+// ...........................................................................................
 // Read JSON keys file sync - You need to edit ./data/secret-keys-json with your own title+secret
 var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 var testSecret = secretKeys.stripeTestSecret;
-var liveSecret = secretKeys.stripeLiveSecret;
+//var liveSecret = secretKeys.stripeLiveSecret;
 
+var mongoSecrets = secretKeys.mongo;
+var mongoSecretURI = mongoSecrets.uri;
+
+// ...........................................................................................
 // Stripe setup
 // https://github.com/stripe/stripe-node
-var stripe = require('stripe')(liveSecret);
+var stripe = require('stripe')(testSecret);
 stripe.setTimeout(20000); // in ms (this is 20 seconds)
 
 // Stripe inventory
@@ -81,30 +88,51 @@ router.get('/charge/testErr', cors(corsOptions), function(req, res)
 });
 
 // ...........................................................................................
+// GET - Test display product receipt ERROR
+router.get('/testbalance', cors(corsOptions), function(req, res)
+{
+    getBalance().then((balance) =>
+    {
+        console.log('success: ' + tolCommon.J(balance))
+
+        console.error('[STRIPE-RESULT] success @ /testbalance');
+        res.send(balance);
+    })
+    .catch((err) =>
+    {
+        console.log('err: ' + tolCommon.J(err))
+        console.error('[STRIPE-RESULT] Err result @ /testbalance');
+        res.status(500).send(err);
+    });
+});
+
+// ...........................................................................................
 function renderReceiptErr(err, res)
 {
-  res.render('receiptErr',
-  {
-    title: 'UNSUCCESSFUL Purchase | Throne of Lies (Imperium42)',
-    errMsg: err.message
-    //email: email
-  });
+    console.error('[STRIPE-RESULT] Err @ renderReceiptErr()');
+    res.status(500).render('receiptErr',
+    {
+        title: 'UNSUCCESSFUL Purchase | Throne of Lies (Imperium42)',
+        //email: email,
+        errMsg: err.message
+    });
 }
 
 // ...........................................................................................
 function renderReceipt(product, qty, email, res)
 {
-  res.render('receipt',
-  {
-    title: 'Successful Purchase | Throne of Lies (Imperium42)',
-    itemImg: product.productImg,
-    itemName: product.productName,
-    itemDescr: product.productDescription,
-    itemNoun: product.productNoun,
-    price: product.productPriceHuman,
-    qty: qty,
-    email: email
-  });  
+    console.error('[STRIPE-RESULT] success @ renderReceipt()');
+    res.render('receipt',
+    {
+        title: 'Successful Purchase | Throne of Lies (Imperium42)',
+        itemImg: product.productImg,
+        itemName: product.productName,
+        itemDescr: product.productDescription,
+        itemNoun: product.productNoun,
+        price: product.productPriceHuman,
+        qty: qty,
+        email: email
+    });
 }
 
 // ...........................................................................................
@@ -114,20 +142,23 @@ router.post('/charge/:name', cors(corsOptions), function(req, res)
     console.log( '[Stripe] params == ' + tolCommon.J(req.params) );
     console.log( '[Stripe] body == ' + tolCommon.J(req.body) );
 
-    var productName = req.params.name; 			// "game"
-    var stripeToken = req.body.stripeToken; 		// <nonce>
-    var stripeTokenType = req.body.stripeTokenType; 	// "card"
-    var ip = req.body.client_ip;                        // 0.0.0.0
-    var email = req.body.stripeEmail;			// "you@you.com" (pre-validated)
-    var ref = req.body.ref;				// "skimm"
-    var src = req.body.src;				// "throneoflies.com"
+    var productName = req.params.name; 			            // "game"
+    var stripeToken = req.body.stripeToken; 		        // <nonce>
+    var stripeTokenType = req.body.stripeTokenType; 	    // "card"
+    var ip = req.body.client_ip || tolCommon.getIP(req);    // 0.0.0.0
+    var email = req.body.stripeEmail;			            // "you@you.com" (pre-validated)
+    var ref = req.body.ref;				                    // "xblade"
+    var src = req.body.src;				                    // "throneoflies.com"
 
     console.log(`@ /charge/${productName} GET`);
     var product = getProduct(productName);
 
     // Validate product
     if (!product)
-    return res.status(500).send('Product does not exist.');
+    {
+        console.error('[STRIPE-RESULT] Err result @ /testbalance');
+        return res.status(500).send('Product does not exist.');
+    }
 
     // Success >>
     var amt = product.productPrice;
@@ -149,28 +180,41 @@ function getProduct(productName)
 
 // ...........................................................................................
 // Verifies webhooks, for example
-function getBalance()
+// **NOTE: THEIR DOCS ARE WRONG! It actually returns (balance, err) for whatever reason.
+// (Keep an eye on this - it may change)
+function getBalance(res)
 {
-    console.log('[STRIPE] @ getBalance');
+    console.log('[Stripe] @ getBalance');
 
     return stripe.balance.retrieve()
-    .then((err, balance) =>
+    .then((balance, err) =>
     {
         if (err)
-        {
-            console.log('[STRIPE] getbalance ERR: ' + tolCommon.J(err));
             return Promise.reject(err);
-        }
         else
         {
-            console.log('[STRIPE] getbalance balance==' + balance);
+            console.log('[Stripe] Successful getBalance() => balance==' + balance);
+            if (res)
+            {
+                console.error('[STRIPE-RESULT] success @ getBalance()');
+                res.send(balance);
+            }
             return Promise.resolve(balance);
         }
     })
     .catch((err) =>
     {
         console.log('[STRIPE-ERR] getBalance ERR: ' + tolCommon.J(err));
-        return Promise.reject(err); // REMOVE ME
+        if (res && !res.headersSent)
+        {
+            // End here
+            console.error('[STRIPE-RESULT] Err caught @ getBalance()');
+            res.status(500).send(err);
+            return;
+        }
+
+        // Reject and continue
+        return Promise.reject(err);
     });
 }
 
@@ -191,7 +235,7 @@ function verifyEvent(event_json, callback)
         if (err)
         {
             // Fail >>
-            console.log("[STRIPE] verifyEvent ERR: " + err);
+            console.log("[STRIPE] verifyEvent ERR: " + tolCommon.J(err));
             resolve(false);
             // resolve(event);
         }
@@ -204,8 +248,11 @@ function verifyEvent(event_json, callback)
     })
     .catch((err) =>
     {
-        console.log("[STRIPE-ERR] ERR @ verifying event: " + err);
-        return false;
+        console.log("[STRIPE-ERR] ERR @ verifying event: " + tolCommon.J(err));
+        if (callback)
+            return false;
+        else
+            return Promise.reject(err);
     });
 }
 
@@ -234,14 +281,62 @@ function verifyEvent(event_json, callback)
 //}
 
 // ...........................................................................................
+router.get('/dbtest', (req, res) =>
+{
+    console.log('@ GET /dbtest');
+    getSteamKey((steamKey) =>
+    {
+        // console.log('keyIndex==' + steamKey);
+        res.send(steamKey || "nada");
+    })
+});
+
+// ...........................................................................................
+function getSteamKey(callback)
+{
+    console.log('@ getSteamKey');
+
+    // Standard URI format: mongodb://[dbuser:dbpassword@]host:port/dbname
+    mongodb.MongoClient.connect(mongoSecretURI, (err, db) =>
+    {
+        if (err)
+        {
+            console.log('db ERR: ' + tolCommon.J(err));
+            if (callback)
+                callback(null);
+        }
+
+        console.log('[Stripe] @ getSteamKey: Connected');
+
+        var keys = db.collection('keyscollection');
+
+        keys.find({ '_id': 'stripe' }).toArray((error, docs) =>
+        {
+            if (error) throw error;
+            // console.log('docs==' + tolCommon.J(docs));
+
+            // var keyIndex = docs[0].keyIndex;
+            // console.log('keyIndex==' + keyIndex);
+
+            var steamKey = docs[0].keysAvail[0];
+            console.log('getSteamKey() steamKey==' + steamKey);
+
+            db.close();
+            if (callback)
+                callback(steamKey);
+        });
+    });
+}
+
+// ...........................................................................................
 // TODO: Add ip
 function generateMetadata(ref, src, ip)
 {
     var meta =
     {
-    'ref': ref,
-    'src': src,
-    'ip': ip
+        'ref': ref,
+        'src': src,
+        'ip': ip
     };
 
     console.log('[Stripe-Meta] ref == ' + ref);
@@ -274,46 +369,139 @@ function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip
 {
     console.log('[STRIPE] @ chargeCust');
 
+    // Generate meta and prepare for results
     var meta = generateMetadata(ref, src, ip);
+    var results = {};
 
     // Create a new customer and then a new charge for that customer:
     console.log('[Stripe-1] email == ' + custEmail);
     stripe.customers.create({
-    email: custEmail,
-    metadata: meta
-    }).then(function(customer)
+        email: custEmail,
+        metadata: meta
+
+    }).then((customer) =>
     {
         console.log('[Stripe-2] customer ==  ' + customer);
+        results.customer = customer;
+
         return stripe.customers.createSource(customer.id,
+        {
+            //source: generateMockSource(),
+            source: stripeToken,
+            metadata: meta
+        });
+
+    }).then((source) =>
     {
-        //source: generateMockSource(),
-        source: stripeToken,
-        metadata: meta
-    });
-    }).then(function(source)
+        console.log('[Stripe-3] source == ' + source);
+        results.source = source;
+
+        // Get Steam key
+        console.log('[Stripe-3] Getting Steam key...');
+        getSteamKey((steamKey) =>
+        {
+            return steamKey;
+        });
+
+    }).then((steamKey) =>
     {
-    console.log('[Stripe-3] source == ' + source);
-    return stripe.charges.create({
-        //amount: 1600,
-        amount: amt,
-        currency: 'usd',
-        customer: source.customer,
-        metadata: meta
-    });
-    }).then(function(charge)
+        console.log('[Stripe-4] steamKey==' + steamKey);
+        results.steamKey = steamKey;
+        var chargeDescr = `${product.productDescription}:  ${steamKey}`;
+
+        console.log('[Stripe-4] Creating charge...');
+        return stripe.charges.create({
+            //amount: 1600,
+            amount: amt,
+            currency: 'usd',
+            customer: results.source.customer,
+            description: chargeDescr,
+            metadata: meta
+        });
+
+    }).then((charge) =>
     {
         // SUCCESS >> New charge created on a new customer
-        console.log('[Stripe-4] Success! charge == ' + charge);
+        console.log('[Stripe-5] Success (showing receipt page now)! charge == ' + charge);
+        results.charge = charge;
+
         //res.send(charge);
         renderReceipt(product, qty, custEmail, res);
-    }).catch(function(err)
+
+        console.log('[Stripe-5] Getting balance...');
+        return getBalance();
+
+    }).then((balance) =>
+    {
+        console.log('[Stripe-6] Success! balance == ' + tolCommon.J(balance));
+        results.balance = balance;
+
+        console.log("[Stripe-6] Sending Discord webhook...");
+        var chargeObj = generateMockVerifyOrChargeResult().data.object;
+        return discord.discordSendStripeHook(chargeObj, balance); // (verifyResult, balance, [res])
+
+    }).then((err, webhookRes, body) =>
+    {
+        if (err)
+            console.error('[Stripe-7-RESULT] ERR: ' + J(err));
+        else
+            console.log('[Stripe-7-RESULT] Success: ' + webhookRes.statusCode);
+
+    }).catch((err) =>
     {
         // FAIL >>
-        console.log('[Stripe] ERR: ' + err);
+        console.log('[STRIPE] Caught ERR: ' + tolCommon.J(err) + ( ' << (If empty, false positive: Successful webhook)')); // Why err?
         var errCode = err.code || 500;
         //res.status(errCode).send(err);
-        renderReceiptErr(err, res);
+        if (!res.headersSent)
+            renderReceiptErr(err, res);
     });
+}
+
+// ..........................................................................................
+// function generateMockBalance()
+// {
+//     console.log('@ generateMockBalance');
+//
+//     var mockBalance =
+//     {
+//         pending:
+//         {
+//             amount: 42.42
+//         },
+//         available:
+//         {
+//             amount: 42.43
+//         }
+//     };
+//
+//     console.log('Returning mock balance: ' + mockBalance)
+//     return mockBalance;
+// }
+
+// ..........................................................................................
+function generateMockVerifyOrChargeResult()
+{
+    console.log('[STRIPE] @ generateMockVerifyResult');
+
+    var mockVerifyOrChargeRes =
+    {
+        data:
+        {
+            object:
+            {
+                amount: 999,
+                metadata:
+                {
+                    src: 'throneoflies.com',
+                    ref: 'TEST-DEBUG'
+                }
+            }
+        }
+    };
+
+    console.log('Returning mock verifyOrChargeResult: ' + mockVerifyOrChargeRes)
+    return mockVerifyOrChargeRes;
 }
 
 // ..........................................................................................

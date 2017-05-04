@@ -193,24 +193,38 @@ function discordTest(res)
 // ...........................................................................................
 // res = send 200
 // no res = return promise
-function sendStripeHook(verifyResult, balance, res)
+function sendStripeHook(chargeResult, balance)
 {
-    console.log('[Discord-Hook] @ sendStripeHook');
-    console.log('[Discord-Hook] balance==' + balance);
+    console.log('[Discord-Hook] @ sendStripeHook(): chargeResult==' + tolCommon.J(chargeResult));
+    console.log('[Discord-Hook] @ sendStripeHook(): balance==' + tolCommon.J(chargeResult));
+
     var stripeInfo = discordWebhookUrls.stripe;
     var uri = stripeInfo.url;
 
-    var resObj = verifyResult.data.object;
-
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Prepare content
+    console.log('[Discord-Hook] @ sendStripeHook: Preparing txt...');
+    console.log('[Discord-Hook] balance.pending.amount==' + balance.pending[0].amount);
+    console.log('[Discord-Hook] balance.available.amount==' + balance.available[0].amount);
+    console.log('[Discord-Hook] chargeResult.amount==' + chargeResult.amount);
+    console.log('[Discord-Hook] chargeResult.metadata.src==' + chargeResult.metadata.src);
+    console.log('[Discord-Hook] chargeResult.metadata.ref==' + chargeResult.metadata.ref);
+
+    var amtPending = balance.pending[0].amount;
+    var amtAvail = balance.available[0].amount;
     var txt =
     {
-        balancePendingHuman: balance.pending.amount * .01,      // 999 => 9.99,
-        balanceAvailHuman: balance.available.amount * .01,      // 999 => 9.99,
-        amtHuman: resObj.amount * .01,                          // 999 => 9.99
-        src: resObj.metadata.src,
-        ref: resObj.metadata.ref
+        balancePendingHuman: (amtPending != 0) // 999 => 9.99
+        ? amtPending * .01
+        : 0,
+
+        balanceAvailHuman: (amtAvail != 0)
+        ? amtAvail* .01
+        : 0,
+
+        amtHuman: chargeResult.amount * .01,
+        src: chargeResult.metadata.src,
+        ref: chargeResult.metadata.ref
     }
 
     console.log('[Discord-Hook] Content==' + tolCommon.J(txt));
@@ -218,75 +232,85 @@ function sendStripeHook(verifyResult, balance, res)
     var refBy = txt.ref !== null
         ? ' Referred by ' + txt.ref
         : ''
-    var txtContent = `**$${txt.amtHuman} Sale** (from ${txt.src})!${refBy}\n(**Pending/Available Balance:** $${txt.balancePendingHuman} **/** $${txt.balanceAvailHuman})`;
+    var txtContent = `**[MOCK] $${txt.amtHuman} Sale** (from ${txt.src})!${refBy}\n>> Pending/Available Balance: \`$${txt.balancePendingHuman}\` / \`$${txt.balanceAvailHuman}\``;
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-    var json =
-    {
-        "content": txtContent
-    };
+    var json = { "content": txtContent };
 
     // Send webhook to Discord
     var options = getOptions(uri, json);
 
-    if (res)
-        res.send(200);
-    else
-        return request(options);
+    // Send request() **DONT USE .THEN()** => Promise
+    console.log('[Discord-Hook] Sending request() NOW...');
+    request(options, (err, webhookRes, body) =>
+    {
+        if (err)
+        {
+            console.error('[Discord-Hook] err @ sendStripeHook.request()');
+            return Promise.reject(err);
+        }
+
+        console.log('[Discord-Hook] Success: ' + webhookRes.statusCode);
+        return Promise.resolve(webhookRes.statusCode);
+    }).catch((err) =>
+    {
+        console.error('[Discord-Hook] Caught ERR: ' + J(err));
+        return Promise.reject(err);
+    });
 }
 
 // ...........................................................................................
 // POST - Process charge, then show results
-router.post('/webhook/stripe', (req, res) =>
-{
-    console.log('[DISCORD] @ /webhook/stripe POST');
-    console.log('[Webhook] params == ' + tolCommon.J(req.params));
-    console.log('[Webhook] body == ' + tolCommon.J(req.body));
-
-    // Retrieve the request's body and parse it as JSON
-    // var event_json = JSON.parse(req.body);
-    console.log('[Discord-Hook] Verifying Stripe token...');
-
-    var results = {};
-
-    // 1 - Verify Stripe event
-    stripe.stripeVerifyEvent(req.body)
-    .then((verifyResult) =>
-    // 2 - Verified the result
-    {
-        console.log('[Discord-Hook] verifyResult==' + verifyResult);
-        results.verify = verifyResult;
-
-        if (!verifyResult)
-            return Promise.reject("Unverified - Aborting!");
-
-        // return sendStripeHook(verifyResult);
-        return stripeGetBalance();
-    }).then((balance) =>
-    // 3 - Got balance
-    {
-        console.log('[Discord-Hook] balance==' + balance);
-        results.balance = balance;
-        return sendStripeHook(verifyResult, balance);
-    }).then((err, discordRes, body) =>
-    {
-        // 4 - Sent Discord webhook
-        if (err)
-        {
-            handleWebhookErr(err, res);
-            return Promise.reject("Unverified - Aborting!");
-        }
-
-        // 5 - Return status
-        console.log('[Discord-Hook] Completed!');
-        res.sendStatus(200);
-    }).catch((err) =>
-    {
-        console.log("ERR: " + err);
-        res.sendStatus(201); // We still send 200 since it's a webhook. 201 to show weirdness.
-        // stripeMockSuccess(res);
-    });
-});
+// router.post('/webhook/stripe', (req, res) =>
+// {
+//     console.log('[DISCORD] @ /webhook/stripe POST');
+//     console.log('[Webhook] params == ' + tolCommon.J(req.params));
+//     console.log('[Webhook] body == ' + tolCommon.J(req.body));
+//
+//     // Retrieve the request's body and parse it as JSON
+//     // var event_json = JSON.parse(req.body);
+//     console.log('[Discord-Hook] Verifying Stripe token...');
+//
+//     var results = {};
+//
+//     // 1 - Verify Stripe event
+//     stripe.stripeVerifyEvent(req.body)
+//     .then((verifyResult) =>
+//     // 2 - Verified the result
+//     {
+//         console.log('[Discord-Hook] verifyResult==' + verifyResult);
+//         results.verify = verifyResult;
+//
+//         if (!verifyResult)
+//             return Promise.reject("Unverified - Aborting!");
+//
+//         // return sendStripeHook(verifyResult);
+//         return stripeGetBalance();
+//     }).then((balance) =>
+//     // 3 - Got balance
+//     {
+//         console.log('[Discord-Hook] "POST() webhook/stripe" balance==' + balance);
+//         results.balance = balance;
+//         return sendStripeHook(verifyResult, balance);
+//     }).then((err, discordRes, body) =>
+//     {
+//         // 4 - Sent Discord webhook
+//         if (err)
+//         {
+//             handleWebhookErr(err, res);
+//             return Promise.reject("Unverified - Aborting!");
+//         }
+//
+//         // 5 - Return status
+//         console.log('[Discord-Hook] Completed!');
+//         res.sendStatus(200);
+//     }).catch((err) =>
+//     {
+//         console.log("ERR: " + err);
+//         res.sendStatus(201); // We still send 200 since it's a webhook. 201 to show weirdness.
+//         // stripeMockSuccess(res);
+//     });
+// });
 
 // ...........................................................................................
 function stripeMockSuccess(res)
@@ -296,7 +320,7 @@ function stripeMockSuccess(res)
     stripe.stripeGetBalance()
     .then((balance) =>
     {
-        console.log('[Discord-Hook] balance==' + balance);
+        console.log('[Discord-Hook] stripeMockSuccess() balance==' + balance);
         stripeMockResult(balance, res);
     }).catch((err) =>
     {
@@ -333,5 +357,6 @@ function stripeMockResult(balance, res)
 // module.exports = router;
 module.exports =
 {
-    myRouter: router
+    myRouter: router,
+    discordSendStripeHook: sendStripeHook
 };
