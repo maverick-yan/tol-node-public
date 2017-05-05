@@ -136,6 +136,19 @@ function renderReceipt(product, qty, email, res)
 }
 
 // ...........................................................................................
+// GET - IP tester
+router.get('/iptest', (req, res) =>
+{
+    // var ip1 = req.body.client_ip;
+    // console.log('ip1==' + ip1);
+
+    var ip2 = tolCommon.getIP(req);
+    console.log('ip2==' + ip2);
+
+    res.send(ip2);
+});
+
+// ...........................................................................................
 // POST - Process charge, then show results
 router.post('/charge/:name', cors(corsOptions), function(req, res)
 {
@@ -284,46 +297,51 @@ function verifyEvent(event_json, callback)
 router.get('/dbtest', (req, res) =>
 {
     console.log('@ GET /dbtest');
-    getSteamKey((steamKey) =>
+
+    getSteamKey().then((steamKey) =>
     {
         // console.log('keyIndex==' + steamKey);
         res.send(steamKey || "nada");
     })
+    .catch((err) =>
+    {
+        res.status(500).send(err);
+    })
 });
 
 // ...........................................................................................
-function getSteamKey(callback)
+function getSteamKey()
 {
     console.log('@ getSteamKey');
 
-    // Standard URI format: mongodb://[dbuser:dbpassword@]host:port/dbname
-    mongodb.MongoClient.connect(mongoSecretURI, (err, db) =>
+    return new Promise ((resolve, reject) =>
     {
-        if (err)
+        // Standard URI format: mongodb://[dbuser:dbpassword@]host:port/dbname
+        mongodb.MongoClient.connect(mongoSecretURI, (err, db) =>
         {
-            console.log('db ERR: ' + tolCommon.J(err));
-            if (callback)
-                callback(null);
-        }
+            if (err)
+                return reject(err);
 
-        console.log('[Stripe] @ getSteamKey: Connected');
+            console.log('[Stripe] @ getSteamKey: Connected');
 
-        var keys = db.collection('keyscollection');
+            var keys = db.collection('keyscollection');
 
-        keys.find({ '_id': 'stripe' }).toArray((error, docs) =>
-        {
-            if (error) throw error;
-            // console.log('docs==' + tolCommon.J(docs));
+            keys.find({ '_id': 'stripe' }).toArray((error, docs) =>
+            {
+                if (error)
+                    return reject(error);
 
-            // var keyIndex = docs[0].keyIndex;
-            // console.log('keyIndex==' + keyIndex);
+                var steamKey = docs[0].keysAvail[0];
+                console.log('getSteamKey() steamKey==' + steamKey);
 
-            var steamKey = docs[0].keysAvail[0];
-            console.log('getSteamKey() steamKey==' + steamKey);
-
-            db.close();
-            if (callback)
-                callback(steamKey);
+                db.close();
+                if (steamKey)
+                {
+                    return resolve(steamKey)
+                }
+                else
+                    return reject("Auto-Steam Keys out of stock! Email support@imperium42.com and let them know and deliver one ASAP!");
+            });
         });
     });
 }
@@ -370,7 +388,7 @@ function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip
     console.log('[STRIPE] @ chargeCust');
 
     // Generate meta and prepare for results
-    var meta = generateMetadata(ref, src, ip);
+    var meta = generateMetadata(ref, src, ip); // Add Steam key LATER to prevent hackers - and only in the charge.
     var results = {};
 
     // Create a new customer and then a new charge for that customer:
@@ -398,16 +416,16 @@ function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip
 
         // Get Steam key
         console.log('[Stripe-3] Getting Steam key...');
-        getSteamKey((steamKey) =>
-        {
-            return steamKey;
-        });
+        return getSteamKey();
 
     }).then((steamKey) =>
     {
         console.log('[Stripe-4] steamKey==' + steamKey);
         results.steamKey = steamKey;
+
+        // Add Steam key to charge, and also to meta for readability (easier to find)
         var chargeDescr = `${product.productDescription}:  ${steamKey}`;
+        meta.steamKey = steamKey;
 
         console.log('[Stripe-4] Creating charge...');
         return stripe.charges.create({

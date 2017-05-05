@@ -32,11 +32,11 @@ exports.GetDateTime = function()
 exports.getIP = function(req)
 {
     var ipInfo =
-    //req.connection.remoteAddress ||
-    //req.socket.remoteAddress ||
-    //req.connection.socket.remoteAddress ||
-    //req.headers['x-cluster-client-ip'] ||
     req.headers['x-real-ip'] ||
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    req.connection.socket.remoteAddress ||
+    req.headers['x-cluster-client-ip'] ||
     req.headers['x-forwarded-for'];
 
     console.log(ipInfo);
