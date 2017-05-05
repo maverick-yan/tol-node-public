@@ -1,9 +1,16 @@
 extends layout.jade
 block content
   block headerLogo
-  h2.redTxt Unsuccessful: You were NOT charged - #{errMsg}
+  h2.redTxt
+    if (isMock)
+      | [Mock] &nbsp;
+    | Unsuccessful: You were NOT charged - #{errMsg}
   p.redTxt
-    | This is likely an issue with your bank - it is suggested to contact them before trying again.
+    if (isBankIssue)
+      | This is likely an issue with your bank - it is suggested to contact them before trying again.
+    else
+      | If you believe this to be a developer error, please let us know:
+      a(href='mailto:support@imperium42.com' target='_blank') support@imperium42.com
   p
     | Until then, we invite you to our 
     a(href='https://discord.gg/gvNbRSB' target='_blank') Discord

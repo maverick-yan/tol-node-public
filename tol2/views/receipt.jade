@@ -8,11 +8,12 @@ block content
         h2 #{itemName}
         h5.productDescr
           | #{itemDescr}
-  h2.greenTxt Success! $#{price} has been charged for: #{qty}x total #{itemNoun}s!
+  h2.greenTxt
+    if (isMock)
+      | [Mock] 
+    | Success! $#{price} has been charged for: #{qty}x total #{itemNoun}s!
   p
-    | We will email your Throne of Lies Steam code to (#{email}) as soon as we can.
-    | We keep an eye on orders coming in, and we will generate the Steam key(s) to send to you.
-    | This process will be automated in the future.
+    | You should receive your receipt + Throne of Lies Steam key to #{email} within 10 minutes.
   p
     | While waiting, we invite you to our 
     a(href='https://discord.gg/gvNbRSB' target='_blank') Discord
