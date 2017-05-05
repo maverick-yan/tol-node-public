@@ -1,5 +1,6 @@
 // ...........................................................................................
 // routes/discord.js
+var IS_BETA = true;
 var fs = require('fs');
 var cors = require('cors');
 var express = require('express');
@@ -10,6 +11,7 @@ var tolCommon = require('./scripts/tolCommon');
 var tolMailer = require('./mailer');
 var stripe = require('./stripe');
 
+// ...........................................................................................
 // cors
 var whitelist =
 [
@@ -24,6 +26,7 @@ var corsOptions =
 };
 router.options(whitelist, cors()); // include before other routes
 
+// ...........................................................................................
 // Read JSON keys file sync - You need to edit ./data/secret-keys-json with your own title+secret
 var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 var discordWebhookUrls = secretKeys.discordWebhookUrls;
@@ -45,6 +48,8 @@ var discordWebhookUrls = secretKeys.discordWebhookUrls;
  https://discordapp.com/developers/docs/resources/webhook
  https://www.npmjs.com/package/discord-webhooks
  */
+var DISCORD_DEBUG = false;
+
 var xbladeUserJson =
 {
     // "avatar": "b004ec1740a63ca06ae2e14c5cee11f3",
@@ -80,6 +85,8 @@ var tolGuild =
 //     channelId:
 // };
 
+// ############################################################################################
+// routes >>
 // ...........................................................................................
 // GET: Discord test
 router.get('/webhook/', (req, res) =>
@@ -90,6 +97,61 @@ router.get('/webhook/', (req, res) =>
 });
 
 // ...........................................................................................
+// POST - Process charge, then show results
+// router.post('/webhook/stripe', (req, res) =>
+// {
+//     console.log('[DISCORD] @ /webhook/stripe POST');
+//     console.log('[Webhook] params == ' + tolCommon.J(req.params));
+//     console.log('[Webhook] body == ' + tolCommon.J(req.body));
+//
+//     // Retrieve the request's body and parse it as JSON
+//     // var event_json = JSON.parse(req.body);
+//     console.log('[Discord-Hook] Verifying Stripe token...');
+//
+//     var results = {};
+//
+//     // 1 - Verify Stripe event
+//     stripe.stripeVerifyEvent(req.body)
+//     .then((verifyResult) =>
+//     // 2 - Verified the result
+//     {
+//         console.log('[Discord-Hook] verifyResult==' + verifyResult);
+//         results.verify = verifyResult;
+//
+//         if (!verifyResult)
+//             return Promise.reject("Unverified - Aborting!");
+//
+//         // return sendStripeHook(verifyResult);
+//         return stripeGetBalance();
+//     }).then((balance) =>
+//     // 3 - Got balance
+//     {
+//         console.log('[Discord-Hook] "POST() webhook/stripe" balance==' + balance);
+//         results.balance = balance;
+//         return sendStripeHook(verifyResult, balance);
+//     }).then((err, discordRes, body) =>
+//     {
+//         // 4 - Sent Discord webhook
+//         if (err)
+//         {
+//             handleWebhookErr(err, res);
+//             return Promise.reject("Unverified - Aborting!");
+//         }
+//
+//         // 5 - Return status
+//         console.log('[Discord-Hook] Completed!');
+//         res.sendStatus(200);
+//     }).catch((err) =>
+//     {
+//         console.log("ERR: " + err);
+//         res.sendStatus(201); // We still send 200 since it's a webhook. 201 to show weirdness.
+//         // stripeMockSuccess(res);
+//     });
+// });
+
+// ############################################################################################
+// funcs >>
+// ...........................................................................................
 function getOptions(uri, json)
 {
     var options =
@@ -99,7 +161,7 @@ function getOptions(uri, json)
         json: json
     }
 
-    console.log('[Discord-Webhook] options==' + tolCommon.J(options));
+    if (DISCORD_DEBUG) console.log('[Discord-Webhook] options==' + tolCommon.J(options));
     return options;
 }
 
@@ -155,36 +217,25 @@ function discordTest(res)
 
         // Success >>
         handleWebhookSuccess(discordRes, res);
-});
-
-    // rp(options)
-    //     .then(function (parsedBody) {
-    //         console.log()
-    //         res.send(parsedBody);
-    //         // POST succeeded...
-    //     })
-    //     .catch(function (err) {
-    //         res.send(err);
-    //         // POST failed...
-    //     });
+    });
 
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Embeds Obj
     /*
-     FIELD       TYPE                DESCRIPTION
-     title	    string	            title of embed
-     type	    string	            type of embed (always "rich" for webhook embeds)
+     FIELD          TYPE                DESCRIPTION
+     title	        string	            title of embed
+     type	        string	            type of embed (always "rich" for webhook embeds)
      description	string	            description of embed
      url	        string	            url of embed
-     timestamp	date	            timestamp of embed content
-     color	    integer	            color code of the embed
-     footer	    [embed footer obj]
-     image	    [embed image obj]
-     thumbnail	[embed thumbnail obj]
-     video	    [embed video obj]
-     provider	[embed provider obj]
-     author	    [embed author obj]
-     fields	    [arr of embed field objs]
+     timestamp	    date	            timestamp of embed content
+     color	        integer	            color code of the embed
+     footer	        [embed footer obj]
+     image	        [embed image obj]
+     thumbnail	    [embed thumbnail obj]
+     video	        [embed video obj]
+     provider	    [embed provider obj]
+     author	        [embed author obj]
+     fields	        [arr of embed field objs]
      */
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     console.log("[Discord-Hook] Done");
@@ -195,20 +246,23 @@ function discordTest(res)
 // no res = return promise
 function sendStripeHook(chargeResult, balance)
 {
-    console.log('[Discord-Hook] @ sendStripeHook(): chargeResult==' + tolCommon.J(chargeResult));
-    console.log('[Discord-Hook] @ sendStripeHook(): balance==' + tolCommon.J(chargeResult));
+    if (DISCORD_DEBUG) console.log('[Discord-Hook] @ sendStripeHook(): chargeResult==' + tolCommon.J(chargeResult));
+    if (DISCORD_DEBUG) console.log('[Discord-Hook] @ sendStripeHook(): balance==' + tolCommon.J(chargeResult));
 
     var stripeInfo = discordWebhookUrls.stripe;
     var uri = stripeInfo.url;
 
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Prepare content
-    console.log('[Discord-Hook] @ sendStripeHook: Preparing txt...');
-    console.log('[Discord-Hook] balance.pending.amount==' + balance.pending[0].amount);
-    console.log('[Discord-Hook] balance.available.amount==' + balance.available[0].amount);
-    console.log('[Discord-Hook] chargeResult.amount==' + chargeResult.amount);
-    console.log('[Discord-Hook] chargeResult.metadata.src==' + chargeResult.metadata.src);
-    console.log('[Discord-Hook] chargeResult.metadata.ref==' + chargeResult.metadata.ref);
+    if (DISCORD_DEBUG)
+    {
+        console.log('[Discord-Hook] @ sendStripeHook: Preparing txt...');
+        console.log('[Discord-Hook] balance.pending.amount==' + balance.pending[0].amount);
+        console.log('[Discord-Hook] balance.available.amount==' + balance.available[0].amount);
+        console.log('[Discord-Hook] chargeResult.amount==' + chargeResult.amount);
+        console.log('[Discord-Hook] chargeResult.metadata.src==' + chargeResult.metadata.src);
+        console.log('[Discord-Hook] chargeResult.metadata.ref==' + chargeResult.metadata.ref);
+    }
 
     var amtPending = balance.pending[0].amount;
     var amtAvail = balance.available[0].amount;
@@ -232,7 +286,12 @@ function sendStripeHook(chargeResult, balance)
     var refBy = txt.ref !== null
         ? ' Referred by ' + txt.ref
         : ''
-    var txtContent = `**[MOCK] $${txt.amtHuman} Sale** (from ${txt.src})!${refBy}\n>> Pending/Available Balance: \`$${txt.balancePendingHuman}\` / \`$${txt.balanceAvailHuman}\``;
+
+    var txtContent = "";
+    if (IS_BETA)
+        txtContent = `**[MOCK] $${txt.amtHuman} Sale** (from ${txt.src})!${refBy}\n>> Pending/Available Balance: \`$${txt.balancePendingHuman}\` / \`$${txt.balanceAvailHuman}\``;
+    else
+        txtContent = `**$${txt.amtHuman} Sale** (from ${txt.src})!${refBy}\n>> Pending/Available Balance: \`$${txt.balancePendingHuman}\` / \`$${txt.balanceAvailHuman}\``;
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     var json = { "content": txtContent };
@@ -260,98 +319,45 @@ function sendStripeHook(chargeResult, balance)
 }
 
 // ...........................................................................................
-// POST - Process charge, then show results
-// router.post('/webhook/stripe', (req, res) =>
+// function stripeMockSuccess(res)
 // {
-//     console.log('[DISCORD] @ /webhook/stripe POST');
-//     console.log('[Webhook] params == ' + tolCommon.J(req.params));
-//     console.log('[Webhook] body == ' + tolCommon.J(req.body));
+//     console.log('[Discord-Hook] @ stripeMockSuccess');
 //
-//     // Retrieve the request's body and parse it as JSON
-//     // var event_json = JSON.parse(req.body);
-//     console.log('[Discord-Hook] Verifying Stripe token...');
-//
-//     var results = {};
-//
-//     // 1 - Verify Stripe event
-//     stripe.stripeVerifyEvent(req.body)
-//     .then((verifyResult) =>
-//     // 2 - Verified the result
+//     stripe.stripeGetBalance()
+//     .then((balance) =>
 //     {
-//         console.log('[Discord-Hook] verifyResult==' + verifyResult);
-//         results.verify = verifyResult;
-//
-//         if (!verifyResult)
-//             return Promise.reject("Unverified - Aborting!");
-//
-//         // return sendStripeHook(verifyResult);
-//         return stripeGetBalance();
-//     }).then((balance) =>
-//     // 3 - Got balance
-//     {
-//         console.log('[Discord-Hook] "POST() webhook/stripe" balance==' + balance);
-//         results.balance = balance;
-//         return sendStripeHook(verifyResult, balance);
-//     }).then((err, discordRes, body) =>
-//     {
-//         // 4 - Sent Discord webhook
-//         if (err)
-//         {
-//             handleWebhookErr(err, res);
-//             return Promise.reject("Unverified - Aborting!");
-//         }
-//
-//         // 5 - Return status
-//         console.log('[Discord-Hook] Completed!');
-//         res.sendStatus(200);
+//         console.log('[Discord-Hook] stripeMockSuccess() balance==' + balance);
+//         stripeMockResult(balance, res);
 //     }).catch((err) =>
 //     {
-//         console.log("ERR: " + err);
+//         console.log("[Discord-Hook] stripeMockSuccess ERR: " + err);
 //         res.sendStatus(201); // We still send 200 since it's a webhook. 201 to show weirdness.
-//         // stripeMockSuccess(res);
 //     });
-// });
+// }
 
 // ...........................................................................................
-function stripeMockSuccess(res)
-{
-    console.log('[Discord-Hook] @ stripeMockSuccess');
-
-    stripe.stripeGetBalance()
-    .then((balance) =>
-    {
-        console.log('[Discord-Hook] stripeMockSuccess() balance==' + balance);
-        stripeMockResult(balance, res);
-    }).catch((err) =>
-    {
-        console.log("[Discord-Hook] stripeMockSuccess ERR: " + err);
-        res.sendStatus(201); // We still send 200 since it's a webhook. 201 to show weirdness.
-    });
-}
-
-// ...........................................................................................
-function stripeMockResult(balance, res)
-{
-    console.log('[Discord-Hook] @ stripeMockResult');
-
-    var mockResult =
-    {
-        data:
-        {
-            object:
-            {
-                amount: 999,
-                metadata:
-                {
-                    src: 'throneoflies.com (TEST)',
-                    ref: 'xblade'
-                }
-            }
-        }
-    };
-
-    return sendStripeHook(mockResult, balance, res);
-}
+// function stripeMockResult(balance, res)
+// {
+//     console.log('[Discord-Hook] @ stripeMockResult');
+//
+//     var mockResult =
+//     {
+//         data:
+//         {
+//             object:
+//             {
+//                 amount: 999,
+//                 metadata:
+//                 {
+//                     src: 'throneoflies.com (TEST)',
+//                     ref: 'xblade'
+//                 }
+//             }
+//         }
+//     };
+//
+//     return sendStripeHook(mockResult, balance, res);
+// }
 
 // ...........................................................................................
 // module.exports = router;

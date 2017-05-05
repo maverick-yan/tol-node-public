@@ -1,5 +1,6 @@
 // ...........................................................................................
 // routes/stripe.js
+const IS_BETA = true;
 var fs = require('fs');
 var cors = require('cors');
 var express = require('express');
@@ -9,6 +10,7 @@ var tolCommon = require('./scripts/tolCommon');
 var tolMailer = require('./mailer');
 var discord = require('./discord');
 
+// ...........................................................................................
 // cors
 var whitelist =
 [
@@ -27,101 +29,114 @@ router.options(whitelist, cors()); // include before other routes
 // Read JSON keys file sync - You need to edit ./data/secret-keys-json with your own title+secret
 var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 var testSecret = secretKeys.stripeTestSecret;
-//var liveSecret = secretKeys.stripeLiveSecret;
+var liveSecret = secretKeys.stripeLiveSecret;
 
 var mongoSecrets = secretKeys.mongo;
 var mongoSecretURI = mongoSecrets.uri;
 
+var adminEmail = secretKeys.adminEmails[0];
+var supportEmail = secretKeys.supportEmail;
+
 // ...........................................................................................
 // Stripe setup
 // https://github.com/stripe/stripe-node
-var stripe = require('stripe')(testSecret);
+var STRIPE_DEBUG = false; // Extra logs
+var selectedSecret = (IS_BETA ? testSecret : liveSecret);
+var stripe = require('stripe')(selectedSecret);
 stripe.setTimeout(20000); // in ms (this is 20 seconds)
 
 // Stripe inventory
 var products =
 [
-  {
-    shortName: 'game',
-    productName: 'Throne of Lies (Game)',
-    productDescription: 'Steam Key with Alpha+ Access',
-    productNoun: 'game key',
-    productPriceHuman: 9.99,
-    productPrice: 999,
-    productImg: 'https://i.imgur.com/cH9OjNC.jpg'
-  }
+    {
+        shortName: 'game',
+        productName: 'Throne of Lies (Game)',
+        productDescription: 'Steam Key with Alpha+ Access',
+        productNoun: 'game key',
+        productPriceHuman: 9.99,
+        productPrice: 999,
+        productImg: 'https://i.imgur.com/cH9OjNC.jpg'
+    }
 ];
 
 // ...........................................................................................
 // GET - Test (root)
-router.get('/', cors(corsOptions), function(req, res, next) 
+router.get('/', cors(corsOptions), (req, res, next) =>
 {
-  res.jsonp({ status: 'ONLINE' });
+    res.jsonp({ status: 'ONLINE' });
 });
 
 // ...........................................................................................
 // GET - Test display product receipt
-router.get('/charge/test', cors(corsOptions), function(req, res)
+router.get('/charge/test', cors(corsOptions), (req, res) =>
 {
   var product = products[0];
   var qty = 1;
   var email = 'blah@blah.com';
-  
-  renderReceipt(product, qty, email, res);
+
+  var isMock = true;
+  renderReceipt(product, qty, email, res, isMock); // (product, qty, email, res, isMockRun)
 });
 
 // ...........................................................................................
 // GET - Test display product receipt ERROR
-router.get('/charge/testErr', cors(corsOptions), function(req, res)
+router.get('/charge/testErr', cors(corsOptions), (req, res) =>
 {
-  //var product = products[0];
-  //var qty = 1;
-  //var email = 'blah@blah.com';
+    //var product = products[0];
+    //var qty = 1;
+    //var email = 'blah@blah.com';
 
-  var err = 
-  {
-    type: 'StripeCardError',
-    message: 'This is a test error'
-  };
+    var err =
+    {
+        type: 'StripeCardError',
+        message: 'This is a test error'
+    };
 
-  renderReceiptErr(err, res);
+    var isMock = true;
+    renderReceiptErr(err, res, isMock);
 });
 
 // ...........................................................................................
 // GET - Test display product receipt ERROR
-router.get('/testbalance', cors(corsOptions), function(req, res)
-{
-    getBalance().then((balance) =>
-    {
-        console.log('success: ' + tolCommon.J(balance))
-
-        console.error('[STRIPE-RESULT] success @ /testbalance');
-        res.send(balance);
-    })
-    .catch((err) =>
-    {
-        console.log('err: ' + tolCommon.J(err))
-        console.error('[STRIPE-RESULT] Err result @ /testbalance');
-        res.status(500).send(err);
-    });
-});
+// router.get('/testbalance', cors(corsOptions), function(req, res)
+// {
+//     getBalance().then((balance) =>
+//     {
+//         console.log('success: ' + tolCommon.J(balance))
+//
+//         console.error('[STRIPE-RESULT] success @ /testbalance');
+//         res.send(balance);
+//     })
+//     .catch((err) =>
+//     {
+//         console.log('err: ' + tolCommon.J(err))
+//         console.error('[STRIPE-RESULT] Err result @ /testbalance');
+//         res.status(500).send(err);
+//     });
+// });
 
 // ...........................................................................................
-function renderReceiptErr(err, res)
+function renderReceiptErr(err, res, isMockRun)
 {
     console.error('[STRIPE-RESULT] Err @ renderReceiptErr()');
+
+    var isBank = detectIfErrIsBankProblem(err);
+
     res.status(500).render('receiptErr',
     {
         title: 'UNSUCCESSFUL Purchase | Throne of Lies (Imperium42)',
         //email: email,
-        errMsg: err.message
+        errMsg: err.message,
+        isBankIssue: isBank,
+        isMock: (IS_BETA || isMockRun)
     });
 }
 
 // ...........................................................................................
-function renderReceipt(product, qty, email, res)
+function renderReceipt(product, qty, email, res, isMockRun)
 {
     console.error('[STRIPE-RESULT] success @ renderReceipt()');
+
     res.render('receipt',
     {
         title: 'Successful Purchase | Throne of Lies (Imperium42)',
@@ -131,7 +146,8 @@ function renderReceipt(product, qty, email, res)
         itemNoun: product.productNoun,
         price: product.productPriceHuman,
         qty: qty,
-        email: email
+        email: email,
+        isMock: (IS_BETA || isMockRun)
     });
 }
 
@@ -139,12 +155,7 @@ function renderReceipt(product, qty, email, res)
 // GET - IP tester
 router.get('/iptest', (req, res) =>
 {
-    // var ip1 = req.body.client_ip;
-    // console.log('ip1==' + ip1);
-
     var ip2 = tolCommon.getIP(req);
-    console.log('ip2==' + ip2);
-
     res.send(ip2);
 });
 
@@ -182,7 +193,7 @@ router.post('/charge/:name', cors(corsOptions), function(req, res)
 // ...........................................................................................
 function getProduct(productName)
 {
-  for (var i = 0; i < products.length; i++) 
+  for (var i = 0; i < products.length; i++)
   {
     if(productName === products[i].shortName)
       return products[i];
@@ -274,18 +285,18 @@ function verifyEvent(event_json, callback)
 //function createCust(custEmail)
 //{
 //  console.log('@ createCust: ' + custEmail);
-//  
+//
 //  stripe.customers.create(
 //    { email: custEmail },
-//    function(err, customer) 
+//    function(err, customer)
 //    {
-//      if (err) 
+//      if (err)
 //      {
 //        // null if no error occurred
 //        console.log('Failed to make customer: ' + err);
-//        return err; 
+//        return err;
 //      }
-//      
+//
 //      // SUCCESS >>
 //      console.log('Successfully made customer: ' + tolCommon.J(customer));
 //      return customer;
@@ -294,20 +305,20 @@ function verifyEvent(event_json, callback)
 //}
 
 // ...........................................................................................
-router.get('/dbtest', (req, res) =>
-{
-    console.log('@ GET /dbtest');
-
-    getSteamKey().then((steamKey) =>
-    {
-        // console.log('keyIndex==' + steamKey);
-        res.send(steamKey || "nada");
-    })
-    .catch((err) =>
-    {
-        res.status(500).send(err);
-    })
-});
+// router.get('/dbtest', (req, res) =>
+// {
+//     console.log('@ GET /dbtest');
+//
+//     getSteamKey().then((steamKey) =>
+//     {
+//         // console.log('keyIndex==' + steamKey);
+//         res.send(steamKey || "nada");
+//     })
+//     .catch((err) =>
+//     {
+//         res.status(500).send(err);
+//     })
+// });
 
 // ...........................................................................................
 function getSteamKey()
@@ -340,9 +351,49 @@ function getSteamKey()
                     return resolve(steamKey)
                 }
                 else
-                    return reject("Auto-Steam Keys out of stock! Email support@imperium42.com and let them know and deliver one ASAP!");
+                    return reject(`Auto-Steam Keys out of stock! Email ${adminEmail} and let them know and deliver one ASAP!`);
             });
         });
+    });
+}
+
+// ...........................................................................................
+function delSteamKey(steamKey)
+{
+    console.log('@ delSteamKey');
+
+    return new Promise ((resolve, reject) =>
+    {
+        // Standard URI format: mongodb://[dbuser:dbpassword@]host:port/dbname
+        mongodb.MongoClient.connect(mongoSecretURI, (err, db) =>
+        {
+            if (err)
+                return reject(err);
+
+            console.log('[Stripe] @ delSteamKey: Connected');
+
+            // Get keyscollection "collection"
+            var keys = db.collection('keyscollection');
+
+            // Find Stripe "key"
+            var findStripeKey = { '_id': 'stripe' };
+            keys.find(findStripeKey).toArray((error, docs) =>
+            {
+                if (error)
+                    return reject(error);
+
+                // Delete used key
+                keys.update(findStripeKey, { $pull: { 'keysAvail': steamKey } });
+
+                db.close();
+                return resolve(true)
+                    return reject(`Auto-Steam Keys out of stock! Email ${supportEmail} and let them know and deliver one ASAP!`);
+            });
+        });
+    }).catch((err) =>
+    {
+        console.error(err);
+        return reject(err);
     });
 }
 
@@ -357,9 +408,9 @@ function generateMetadata(ref, src, ip)
         'ip': ip
     };
 
-    console.log('[Stripe-Meta] ref == ' + ref);
-    console.log('[Stripe-Meta] src == ' + src);
-    console.log('[StripeMeta] ip == ' + ip);
+    if (ref) console.log('[Stripe-Meta] ref == ' + ref);
+    if (STRIPE_DEBUG) console.log('[Stripe-Meta] src == ' + src);
+    if (STRIPE_DEBUG) console.log('[StripeMeta] ip == ' + ip);
 
     return meta;
 }
@@ -385,7 +436,7 @@ stripeShippingAddressCountry	Shipping address details (if enabled)
 //function chargeCust(custEmail, cardExpMonth, cardExpYear, cardNum, cardCVC, amt, currency)
 function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip)
 {
-    console.log('[STRIPE] @ chargeCust');
+    console.log('[Stripe] @ chargeCust');
 
     // Generate meta and prepare for results
     var meta = generateMetadata(ref, src, ip); // Add Steam key LATER to prevent hackers - and only in the charge.
@@ -393,86 +444,102 @@ function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip
 
     // Create a new customer and then a new charge for that customer:
     console.log('[Stripe-1] email == ' + custEmail);
+    if (STRIPE_DEBUG) console.log('[Stripe-2] Creating a new customer...');
     stripe.customers.create({
         email: custEmail,
         metadata: meta
 
     }).then((customer) =>
     {
-        console.log('[Stripe-2] customer ==  ' + customer);
+        console.log('[Stripe-2] Success! customer ==  ' + customer);
         results.customer = customer;
 
-        return stripe.customers.createSource(customer.id,
+        if (STRIPE_DEBUG) console.log('[Stripe-3] Getting customer charge source...');
+        var tokenInfo =
         {
-            //source: generateMockSource(),
             source: stripeToken,
             metadata: meta
-        });
+        }
+        return stripe.customers.createSource(customer.id, tokenInfo);
 
     }).then((source) =>
     {
-        console.log('[Stripe-3] source == ' + source);
+        console.log('[Stripe-3] Success! source == ' + source);
         results.source = source;
 
-        // Get Steam key
-        console.log('[Stripe-3] Getting Steam key...');
+        if (STRIPE_DEBUG) console.log('[Stripe-4] Getting Steam key...');
         return getSteamKey();
 
     }).then((steamKey) =>
     {
-        console.log('[Stripe-4] steamKey==' + steamKey);
+        console.log('[Stripe-4] Success! steamKey==' + steamKey);
         results.steamKey = steamKey;
 
-        // Add Steam key to charge, and also to meta for readability (easier to find)
-        var chargeDescr = `${product.productDescription}:  ${steamKey}`;
-        meta.steamKey = steamKey;
-
-        console.log('[Stripe-4] Creating charge...');
-        return stripe.charges.create({
-            //amount: 1600,
-            amount: amt,
-            currency: 'usd',
-            customer: results.source.customer,
-            description: chargeDescr,
-            metadata: meta
-        });
+        if (STRIPE_DEBUG) console.log('[Stripe-5] Creating Stripe charge...');
+        return createStripeCharge(steamKey, amt, results.source.customer, meta, product);
 
     }).then((charge) =>
     {
         // SUCCESS >> New charge created on a new customer
-        console.log('[Stripe-5] Success (showing receipt page now)! charge == ' + charge);
+        console.log('[Stripe-5] Success! charge==' + charge);
         results.charge = charge;
 
-        //res.send(charge);
+        if (STRIPE_DEBUG) console.log('[Stripe-6] Rendering success receipt page...');
+        //res.send(charge); // Contains json of "charge" obj info, for debugging
         renderReceipt(product, qty, custEmail, res);
 
-        console.log('[Stripe-5] Getting balance...');
+        if (STRIPE_DEBUG) console.log('[Stripe-7] Deleting last used Steam key from db...');
+        return delSteamKey(results.steamKey);
+
+    }).then((wasSteamKeyDeleted) =>
+    {
+        console.log('[Stripe-7] Success! wasSteamKeyDeleted==' + wasSteamKeyDeleted);
+        results.wasSteamKeyDeleted = wasSteamKeyDeleted;
+
+        if (STRIPE_DEBUG) console.log('[Stripe-8] Getting Stripe pending/avail balances...');
         return getBalance();
 
     }).then((balance) =>
     {
-        console.log('[Stripe-6] Success! balance == ' + tolCommon.J(balance));
+        console.log('[Stripe-8] Success! balance == ' + tolCommon.J(balance));
         results.balance = balance;
 
-        console.log("[Stripe-6] Sending Discord webhook...");
+        if (STRIPE_DEBUG) console.log("[Stripe-9] Sending Discord webhook...");
         var chargeObj = generateMockVerifyOrChargeResult().data.object;
         return discord.discordSendStripeHook(chargeObj, balance); // (verifyResult, balance, [res])
 
     }).then((err, webhookRes, body) =>
     {
         if (err)
-            console.error('[Stripe-7-RESULT] ERR: ' + J(err));
+            console.error('[Stripe-9-FINAL-RESULT] ERR: ' + J(err));
         else
-            console.log('[Stripe-7-RESULT] Success: ' + webhookRes.statusCode);
+            console.log('[Stripe-9-FINAL-RESULT] Success: ' + webhookRes.statusCode);
 
     }).catch((err) =>
     {
         // FAIL >>
         console.log('[STRIPE] Caught ERR: ' + tolCommon.J(err) + ( ' << (If empty, false positive: Successful webhook)')); // Why err?
         var errCode = err.code || 500;
-        //res.status(errCode).send(err);
         if (!res.headersSent)
             renderReceiptErr(err, res);
+    });
+}
+
+// ..........................................................................................
+function createStripeCharge(steamKey, amt, cust, meta, product)
+{
+    // Add Steam key to charge, and also to meta for readability (easier to find)
+    var chargeDescr = `${product.productDescription}:  ${steamKey}`;
+    meta.steamKey = steamKey;
+
+    console.log('[Stripe-4] Creating charge...');
+    return stripe.charges.create({
+        //amount: 1600,
+        amount: amt,
+        currency: 'usd',
+        customer: cust,
+        description: chargeDescr,
+        metadata: meta
     });
 }
 
@@ -498,44 +565,44 @@ function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip
 // }
 
 // ..........................................................................................
-function generateMockVerifyOrChargeResult()
-{
-    console.log('[STRIPE] @ generateMockVerifyResult');
-
-    var mockVerifyOrChargeRes =
-    {
-        data:
-        {
-            object:
-            {
-                amount: 999,
-                metadata:
-                {
-                    src: 'throneoflies.com',
-                    ref: 'TEST-DEBUG'
-                }
-            }
-        }
-    };
-
-    console.log('Returning mock verifyOrChargeResult: ' + mockVerifyOrChargeRes)
-    return mockVerifyOrChargeRes;
-}
+// function generateMockVerifyOrChargeResult()
+// {
+//     console.log('[STRIPE] @ generateMockVerifyResult');
+//
+//     var mockVerifyOrChargeRes =
+//     {
+//         data:
+//         {
+//             object:
+//             {
+//                 amount: 999,
+//                 metadata:
+//                 {
+//                     src: 'throneoflies.com',
+//                     ref: 'TEST-DEBUG'
+//                 }
+//             }
+//         }
+//     };
+//
+//     console.log('Returning mock verifyOrChargeResult: ' + mockVerifyOrChargeRes)
+//     return mockVerifyOrChargeRes;
+// }
 
 // ..........................................................................................
-function generateMockSource()
-{
-    var mockSrc =
-    {
-        object: 'card',
-        exp_month: 10,
-        exp_year: 2018,
-        number: '4242 4242 4242 4242',
-        cvc: 100
-    };
-  
-  return mockSrc;
-}
+// function generateMockSource()
+// {
+//     var mockSrc =
+//     {
+//         object: 'card',
+//         exp_month: 10,
+//         exp_year: 2018,
+//         number: '4242 4242 4242 4242',
+//         cvc: 100
+//     };
+//
+//   return mockSrc;
+// }
 
 // ..........................................................................................
 // Note: Node.js API does not throw exceptions, and instead prefers the
@@ -550,33 +617,37 @@ function generateMockSource()
 //        function(result) {},
 //        function(err) {}
 //      );
-function handleErr(err)
+function detectIfErrIsBankProblem(err)
 {
-  switch (err.type) 
-  {
-    case 'StripeCardError':
-      // A declined card error
-      err.message; // => e.g. "Your card's expiration year is invalid."
-      break;
-    case 'RateLimitError':
-      // Too many requests made to the API too quickly
-      break;
-    case 'StripeInvalidRequestError':
-      // Invalid parameters were supplied to Stripe's API
-      break;
-    case 'StripeAPIError':
-      // An error occurred internally with Stripe's API
-      break;
-    case 'StripeConnectionError':
-      // Some kind of error occurred during the HTTPS communication
-      break;
-    case 'StripeAuthenticationError':
-      // You probably used an incorrect API key
-      break;
-    default:
-      // Handle any other types of unexpected errors
-      break;
+    var isBankProblem = false;
+    switch (err.type)
+    {
+        case 'StripeCardError':
+            // A declined card error
+            isBankProblem = true;
+            break;
+        case 'RateLimitError':
+            // Too many requests made to the API too quickly
+            break;
+        case 'StripeInvalidRequestError':
+            // Invalid parameters were supplied to Stripe's API
+            break;
+        case 'StripeAPIError':
+            // An error occurred internally with Stripe's API
+            break;
+        case 'StripeConnectionError':
+            // Some kind of error occurred during the HTTPS communication
+            break;
+        case 'StripeAuthenticationError':
+            // You probably used an incorrect API key
+            break;
+        default:
+            // Handle any other types of unexpected errors
+            //isBankProblem = true;
+            break;
     }
+
+    return isBankProblem;
 }
 
 // module.exports = router;
