@@ -247,7 +247,7 @@ function discordTest(res)
 function sendStripeHook(chargeResult, balance)
 {
     if (DISCORD_DEBUG) console.log('[Discord-Hook] @ sendStripeHook(): chargeResult==' + tolCommon.J(chargeResult));
-    if (DISCORD_DEBUG) console.log('[Discord-Hook] @ sendStripeHook(): balance==' + tolCommon.J(chargeResult));
+    // if (DISCORD_DEBUG) console.log('[Discord-Hook] @ sendStripeHook(): balance==' + tolCommon.J(balance));
 
     var stripeInfo = discordWebhookUrls.stripe;
     var uri = stripeInfo.url;
@@ -257,25 +257,25 @@ function sendStripeHook(chargeResult, balance)
     if (DISCORD_DEBUG)
     {
         console.log('[Discord-Hook] @ sendStripeHook: Preparing txt...');
-        console.log('[Discord-Hook] balance.pending.amount==' + balance.pending[0].amount);
-        console.log('[Discord-Hook] balance.available.amount==' + balance.available[0].amount);
+        // console.log('[Discord-Hook] balance.pending.amount==' + balance.pending[0].amount);
+        // console.log('[Discord-Hook] balance.available.amount==' + balance.available[0].amount);
         console.log('[Discord-Hook] chargeResult.amount==' + chargeResult.amount);
         console.log('[Discord-Hook] chargeResult.metadata.src==' + chargeResult.metadata.src);
         console.log('[Discord-Hook] chargeResult.metadata.ref==' + chargeResult.metadata.ref);
     }
 
-    var amtPending = balance.pending[0].amount;
-    var amtAvail = balance.available[0].amount;
+    // var amtPending = balance.pending[0].amount;
+    // var amtAvail = balance.available[0].amount;
     var txt =
     {
-        balancePendingHuman: (amtPending != 0) // 999 => 9.99
-        ? amtPending * .01
-        : 0,
-
-        balanceAvailHuman: (amtAvail != 0)
-        ? amtAvail* .01
-        : 0,
-
+        // balancePendingHuman: (amtPending != 0) // 999 => 9.99
+        // ? amtPending * .01
+        // : 0,
+        //
+        // balanceAvailHuman: (amtAvail != 0)
+        // ? amtAvail* .01
+        // : 0,
+        //
         amtHuman: chargeResult.amount * .01,
         src: chargeResult.metadata.src,
         ref: chargeResult.metadata.ref
@@ -283,15 +283,15 @@ function sendStripeHook(chargeResult, balance)
 
     console.log('[Discord-Hook] Content==' + tolCommon.J(txt));
 
-    var refBy = txt.ref !== null
-        ? ' Referred by ' + txt.ref
-        : ''
+    var refBy = '';
+    if (txt.ref)
+        refBy = '\n>> `Referred by: ' + txt.ref + '`';
 
     var txtContent = "";
     if (IS_BETA)
-        txtContent = `**[MOCK] $${txt.amtHuman} Sale** (from ${txt.src})!${refBy}\n>> Pending/Available Balance: \`$${txt.balancePendingHuman}\` / \`$${txt.balanceAvailHuman}\``;
+        txtContent = `**[MOCK] $${txt.amtHuman} Sale** (from ${txt.src})!${refBy}`; // Add "[MOCK] "
     else
-        txtContent = `**$${txt.amtHuman} Sale** (from ${txt.src})!${refBy}\n>> Pending/Available Balance: \`$${txt.balancePendingHuman}\` / \`$${txt.balanceAvailHuman}\``;
+        txtContent = `**$${txt.amtHuman} Sale** (from ${txt.src})!${refBy}`;
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     var json = { "content": txtContent };

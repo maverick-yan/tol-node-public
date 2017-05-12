@@ -40,10 +40,15 @@ var supportEmail = secretKeys.supportEmail;
 // ...........................................................................................
 // Stripe setup
 // https://github.com/stripe/stripe-node
-var STRIPE_DEBUG = false; // Extra logs
+var STRIPE_DEBUG = true; // Extra logs
 var selectedSecret = (IS_BETA ? testSecret : liveSecret);
 var stripe = require('stripe')(selectedSecret);
 stripe.setTimeout(20000); // in ms (this is 20 seconds)
+
+// Mongo
+var KEYS_AVAIL_KEY = "keysAvail";
+if (IS_BETA)
+    KEYS_AVAIL_KEY = "keysAvailTest";
 
 // Stripe inventory
 var products =
@@ -126,7 +131,7 @@ function renderReceiptErr(err, res, isMockRun)
     {
         title: 'UNSUCCESSFUL Purchase | Throne of Lies (Imperium42)',
         //email: email,
-        errMsg: err.message,
+        errMsg: err.message || err,
         isBankIssue: isBank,
         isMock: (IS_BETA || isMockRun)
     });
@@ -309,7 +314,7 @@ function verifyEvent(event_json, callback)
 // {
 //     console.log('@ GET /dbtest');
 //
-//     getSteamKey().then((steamKey) =>
+//     getDelSteamKey().then((steamKey) =>
 //     {
 //         // console.log('keyIndex==' + steamKey);
 //         res.send(steamKey || "nada");
@@ -321,9 +326,9 @@ function verifyEvent(event_json, callback)
 // });
 
 // ...........................................................................................
-function getSteamKey()
+function getDelSteamKey()
 {
-    console.log('@ getSteamKey');
+    console.log('@ getDelSteamKey');
 
     return new Promise ((resolve, reject) =>
     {
@@ -333,27 +338,89 @@ function getSteamKey()
             if (err)
                 return reject(err);
 
-            console.log('[Stripe] @ getSteamKey: Connected');
+            console.log('[Stripe] @ getDelSteamKey (db): Connected');
 
             var keys = db.collection('keyscollection');
 
-            keys.find({ '_id': 'stripe' }).toArray((error, docs) =>
+            var findStripeKey = { '_id': 'stripe' };
+            keys.find(findStripeKey).toArray((error, docs) =>
             {
                 if (error)
                     return reject(error);
 
-                var steamKey = docs[0].keysAvail[0];
-                console.log('getSteamKey() steamKey==' + steamKey);
+                // Get next Steam key from the top of the arr
+                var steamKey = docs[0][KEYS_AVAIL_KEY][0];
+                console.log('[Stripe] db: getDelSteamKey() steamKey==' + steamKey);
 
-                db.close();
-                if (steamKey)
+                // Delete it immediately from db -- just in case multiple connections. We'll add it back, if failed.
+                if (STRIPE_DEBUG) console.log(`[Stripe] db: Deleting steamKey (${steamKey}) from db...`);
+                keys.update(findStripeKey,
                 {
-                    return resolve(steamKey)
-                }
-                else
-                    return reject(`Auto-Steam Keys out of stock! Email ${adminEmail} and let them know and deliver one ASAP!`);
+                    $pull: {
+                        [KEYS_AVAIL_KEY]: steamKey
+                    }
+                }, (pullErr, pullRes) =>
+                {
+                    db.close();
+                    if (pullErr)
+                        return reject(error);
+
+                    console.log('[Stripe] db: Deleted key successfully: ' + pullRes);
+                    if (steamKey)
+                        return resolve(steamKey)
+                    else
+                        return reject(`Steam Keys out of stock! Let a dev know before trying again.`);
+                });
             });
         });
+    });
+}
+
+// ...........................................................................................
+function addSteamKey(steamKey)
+{
+    console.log('@ addSteamKey');
+
+    return new Promise ((resolve, reject) =>
+    {
+        // Standard URI format: mongodb://[dbuser:dbpassword@]host:port/dbname
+        mongodb.MongoClient.connect(mongoSecretURI, (err, db) =>
+        {
+            if (err)
+                return reject(err);
+
+            console.log('[Stripe] @ addSteamKey: Connected');
+
+            // Get keyscollection "collection"
+            var keys = db.collection('keyscollection');
+
+            // Find Stripe "key"
+            var findStripeKey = { '_id': 'stripe' };
+            keys.find(findStripeKey).toArray((error, docs) =>
+            {
+                if (error)
+                    return reject(error);
+
+                // Add used key
+                keys.update(findStripeKey,
+                {
+                    $push: {
+                        KEYS_AVAIL_KEY: {
+                            $each: [ steamKey ],
+                            $position: 0
+                        }
+                    }
+                });
+
+                db.close();
+                return resolve(true)
+                    return reject(`Auto-Steam Keys out of stock! Email ${supportEmail} and let them know and deliver one ASAP!`);
+            });
+        });
+    }).catch((err) =>
+    {
+        console.error(err);
+        return reject(err);
     });
 }
 
@@ -383,7 +450,12 @@ function delSteamKey(steamKey)
                     return reject(error);
 
                 // Delete used key
-                keys.update(findStripeKey, { $pull: { 'keysAvail': steamKey } });
+                keys.update(findStripeKey,
+                {
+                    $pull: {
+                        KEYS_AVAIL_KEY: steamKey
+                    }
+                });
 
                 db.close();
                 return resolve(true)
@@ -416,31 +488,16 @@ function generateMetadata(ref, src, ip)
 }
 
 // ...........................................................................................
-/* Create a new customer and then a new charge for that customer
-
-stripeToken			The ID of the token representing the payment details
-stripeEmail			The email address the user entered during the Checkout process
-stripeBillingName
-stripeBillingAddressLine1
-stripeBillingAddressZip
-stripeBillingAddressState
-stripeBillingAddressCity
-stripeBillingAddressCountry	Billing address details (if enabled)
-stripeShippingName
-stripeShippingAddressLine1
-stripeShippingAddressZip
-stripeShippingAddressState
-stripeShippingAddressCity
-stripeShippingAddressCountry	Shipping address details (if enabled)
-*/
-//function chargeCust(custEmail, cardExpMonth, cardExpYear, cardNum, cardCVC, amt, currency)
+// Create a new customer and then a new charge for that customer
 function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip)
 {
     console.log('[Stripe] @ chargeCust');
 
     // Generate meta and prepare for results
     var meta = generateMetadata(ref, src, ip); // Add Steam key LATER to prevent hackers - and only in the charge.
-    var results = {};
+    var results = {
+        addBackSteamKeyOnErr: true
+    };
 
     // Create a new customer and then a new charge for that customer:
     console.log('[Stripe-1] email == ' + custEmail);
@@ -468,11 +525,11 @@ function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip
         results.source = source;
 
         if (STRIPE_DEBUG) console.log('[Stripe-4] Getting Steam key...');
-        return getSteamKey();
+        return getDelSteamKey();
 
     }).then((steamKey) =>
     {
-        console.log('[Stripe-4] Success! steamKey==' + steamKey);
+        console.log('[Stripe-4] Success! steamKey==' + steamKey + " (+deleted from db for security)");
         results.steamKey = steamKey;
 
         if (STRIPE_DEBUG) console.log('[Stripe-5] Creating Stripe charge...');
@@ -484,49 +541,68 @@ function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip
         console.log('[Stripe-5] Success! charge==' + charge);
         results.charge = charge;
 
+        // Ensure we don't add back the Steam key at this point, even on err
+        results.addBackSteamKeyOnErr = false;
+
         if (STRIPE_DEBUG) console.log('[Stripe-6] Rendering success receipt page...');
-        //res.send(charge); // Contains json of "charge" obj info, for debugging
         renderReceipt(product, qty, custEmail, res);
 
-        if (STRIPE_DEBUG) console.log('[Stripe-7] Deleting last used Steam key from db...');
-        return delSteamKey(results.steamKey);
-
-    }).then((wasSteamKeyDeleted) =>
-    {
-        console.log('[Stripe-7] Success! wasSteamKeyDeleted==' + wasSteamKeyDeleted);
-        results.wasSteamKeyDeleted = wasSteamKeyDeleted;
-
-        if (STRIPE_DEBUG) console.log('[Stripe-8] Getting Stripe pending/avail balances...');
+        if (STRIPE_DEBUG) console.log('[Stripe-7] Getting Stripe pending/avail balances...');
         return getBalance();
 
     }).then((balance) =>
     {
-        console.log('[Stripe-8] Success! balance == ' + tolCommon.J(balance));
+        console.log('[Stripe-7] Success! balance == ' + tolCommon.J(balance));
         results.balance = balance;
 
-        if (STRIPE_DEBUG) console.log("[Stripe-9] Sending Discord webhook...");
+        if (STRIPE_DEBUG) console.log("[Stripe-8] Sending Discord webhook...");
 
         var chargeObj;
-        if (IS_BETA)
-            chargeObj = generateMockVerifyOrChargeResult().data.object;
-        else
-            chargeObj = results.charge;
+        // if (IS_BETA)
+        //     chargeObj = generateMockVerifyOrChargeResult().data.object;
+        // else
+        chargeObj = results.charge;
         return discord.discordSendStripeHook(chargeObj, balance); // (chargeObj, balance, [res])
 
     }).then((err, webhookRes, body) =>
     {
         if (err)
-            console.error('[Stripe-9-FINAL-RESULT] ERR: ' + J(err));
+            console.error('[Stripe-8-FINAL-RESULT] ERR: ' + J(err));
         else
-            console.log('[Stripe-9-FINAL-RESULT] Success: ' + webhookRes.statusCode);
+            console.log('[Stripe-8-FINAL-RESULT] Success: ' + webhookRes.statusCode);
 
     }).catch((err) =>
     {
         // FAIL >>
-        console.log('[STRIPE] Caught ERR: ' + tolCommon.J(err) + ( ' << (If empty, false positive: Successful webhook)')); // Why err?
-        var errCode = err.code || 500;
-        if (!res.headersSent)
-            renderReceiptErr(err, res);
+        console.error('[STRIPE] Caught ERR: ' + tolCommon.J(err) + ( ' << (If empty, false positive: Successful webhook)')); // Why err?
+
+        // Add Steam key back, if not yet charged on err
+        if (results.addBackSteamKeyOnErr && results.steamKey)
+        {
+            if (STRIPE_DEBUG) console.log('[STRIPE] About to add back steamKey: ' + wasSteamKeyAdded);
+            addSteamKey((results.steamKey)).then((wasSteamKeyAdded) =>
+            {
+                console.log('[STRIPE] Successfully added back steamKey: ' + wasSteamKeyAdded);
+                var errCode = err.code || 500;
+                if (!res.headersSent)
+                    renderReceiptErr(err, res);
+            })
+            .catch((addSteamKeyBackErr) =>
+            {
+                // End
+                console.error('[STRIPE] Caught ERR: Failed to add back Steam key! addSteamKeyBackErr==' + addSteamKeyBackErr);
+                var errCode = err.code || 500;
+                if (!res.headersSent)
+                    renderReceiptErr(err, res);
+            });
+        }
+        else
+        {
+            // End
+            var errCode = err.code || 500;
+                if (!res.headersSent)
+                    renderReceiptErr(err, res);
+        }
     });
 }
 

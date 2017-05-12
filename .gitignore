@@ -12,3 +12,4 @@ tol2/node_modules/*
 *.bak
 *cert-baks
 *.log
+\#.*

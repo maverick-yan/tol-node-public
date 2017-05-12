@@ -8,11 +8,14 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev-old": "nodemon server.js",
     "dev": "sudo DEBUG=express:* gulp",
-    "forever": "sudo forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
-    "foreverDebug": "sudo DEBUG=express:* forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
+    "forever": "sudo forever -p ~/tol-node-public/tol2-test --pidFile ~/tol-node-public/tol2-test/tol-node-public-TEST-55556.pid --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
+    "forever2": "sudo forever --pidFile tol-node-public-TEST-55556.pid --minUptime 3000 --spinSleepTime 3000 -a ./bin/www -o tol-node-public-TEST-55556-logs.log -e tol-node-public-TEST-55556-err.log && sleep 2 && sudo forever list",
+    "foreverDebug": "sudo DEBUG=express:* forever -p ~/tol-node-public/tol2-test --pidFile ~/tol-node-public/tol2-test/tol-node-public-TEST-55556.pid --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
+    "foreverDebug2": "sudo DEBUG=express:* npm run forever",
     "restart": "sudo npm run kill && sudo npm run forever",
     "restart-debug": "sudo npm run kill && sudo npm run debug",
-    "kill": "killall -9 node"
+    "killall": "killall -9 node",
+    "kill": "sudo forever stop `cat ~/.forever/pids/tol-node-public-TEST-55556.pid`"
   },
   "dependencies": {
     "body-parser": "~1.16.1",

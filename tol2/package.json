@@ -8,11 +8,12 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev-old": "nodemon server.js",
     "dev": "sudo DEBUG=express:* gulp",
-    "forever": "sudo forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
-    "foreverDebug": "sudo DEBUG=express:* forever --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
+    "forever": "sudo forever -p ~/tol-node-public/tol2 --pidFile ~/tol-node-public/tol2/tol-node-public-55555.pid --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
+    "foreverDebug": "sudo DEBUG=express:* forever -p ~/tol-node-public/tol2 --pidFile ~/tol-node-public/tol2/tol-node-public-55555.pid --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
     "restart": "sudo npm run kill && sudo npm run forever",
     "restart-debug": "sudo npm run kill && sudo npm run debug",
-    "kill": "killall -9 node"
+    "kill": "killall -9 node",
+    "kill2": "sudo forever stop --pidFile ./tol-node-public-55555.pid"
   },
   "dependencies": {
     "body-parser": "~1.16.1",
@@ -35,7 +36,7 @@
     "type-of": "^2.0.1"
   },
   "devDependencies": {
-    "forever": "^0.15.2",
+    "forever": "^0.15.3",
     "gulp": "^3.9.1",
     "gulp-livereload": "^3.8.1",
     "gulp-nodemon": "^2.2.1",
