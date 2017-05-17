@@ -5,6 +5,8 @@ var fs = require('fs');
 var cors = require('cors');
 var express = require('express');
 var request = require('request');
+var Discord = require('discord.js');
+var client = new Discord.Client();
 // var rp = require('request-promise');
 var router = express.Router();
 var tolCommon = require('./scripts/tolCommon');
@@ -30,6 +32,7 @@ router.options(whitelist, cors()); // include before other routes
 // Read JSON keys file sync - You need to edit ./data/secret-keys-json with your own title+secret
 var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 var discordWebhookUrls = secretKeys.discordWebhookUrls;
+var discordBotSecrets = secretKeys.discordBot;
 
 // ############################################################################################
 // Discord setup >>
@@ -75,7 +78,8 @@ var tolGuild =
     guild_id: '261525739617255424',
     channels:
     {
-        mod_chat: '303924561659822080'
+        mod_chat: '303924561659822080',
+        looking_for_game: '300527038983569409'
     }
 }
 
@@ -85,8 +89,56 @@ var tolGuild =
 //     channelId:
 // };
 
+
 // ############################################################################################
-// routes >>
+// Discord callbacks >>
+var rdy = false;
+client.on('ready', () =>
+{
+    rdy = true;
+    console.log(`[Discord.js] Logged in as ${client.user.username}!`);
+    // client.user.setStatus('online', 'test');
+});
+
+client.on('message', msg =>
+{
+    if (msg.content === 'ping')
+    {
+        msg.reply('Pong!');
+    }
+});
+
+function getGuildById(id)
+{
+    var g = client.guilds.get(id);
+    console.log('[Discord.js] GUILD ' + g.name + ' == ' + tolCommon.J(g));
+    return g;
+}
+function getChannelById(guildId, channelId)
+{
+    var g = getGuildById(guildId);
+    var c = g.channels.get(channelId);
+    console.log(`[Discord.js] GUILD ${g.name} >> CHANNEL ${c.name}: ${tolCommon.J(c)}`);
+    return c;
+}
+
+function getMyGuild()
+{
+    var g = client.guilds.get(tolGuild.guild_id);
+    console.log('[Discord.js] myGuild == ' + tolCommon.J(g));
+    return g;
+}
+function getLFGChannel()
+{
+    var c = getMyGuild().channels.get(tolGuild.channels.looking_for_game);
+    console.log('[Discord.js] LFG Channel == ' + tolCommon.J(c));
+    return c;
+}
+
+client.login(discordBotSecrets.token);
+
+// ############################################################################################
+// Routes >>
 // ...........................................................................................
 // GET: Discord test
 router.get('/webhook/', (req, res) =>
@@ -95,6 +147,77 @@ router.get('/webhook/', (req, res) =>
     stripe.stripeTest();
     res.json({status: "ONLINE"});
 });
+
+// .............................................................................
+// GET: Guild general info
+router.get('/guild', (req, res) =>
+{
+    var g = getMyGuild();
+    var json = {
+        Guild: g
+    };
+    res.json(json);
+});
+
+// .............................................................................
+// GET: count/guild
+router.get('/guild/count', (req, res) =>
+{
+    var count = getMyGuild().memberCount;
+    console.log('Guild Member Count: ' + count);
+    var json = {
+        memberCount: count
+    };
+    res.json(json);
+});
+
+// .............................................................................
+// GET: Guild LFG channel info
+router.get('/guild/channel/lfg', (req, res) =>
+{
+    var c = getLFGChannel();
+
+    var json = {
+        GuildChannel: c,
+    };
+    res.json(json);
+});
+
+// .............................................................................
+// GET: LFG channel count
+router.get('/guild/channel/lfg/count', (req, res) =>
+{
+    var g = getMyGuild();
+    var c = getLFGChannel();
+    var count = 0;
+
+    // for (const member of g.members.values())
+    // {
+    //     if (members[i].client.status === 0)
+    //         count++;
+    // }
+    var onlineMembers = g.members.filter(m => m.presence.status === 'online').size;
+
+    // var onlineMembers = g.members.findAll('status', 0);
+
+    var json = {
+        channelCount: onlineMembers
+    };
+    res.json(json);
+});
+
+// .............................................................................
+// GET: Any channel
+//router.get('/count/channel/:ch', (req, res) =>
+//{
+//    var cName = req.params.ch;
+//    var c = getChannelById(c
+//    console.log('[d.js] LFG Channel Count: ' + count);
+//    var json = {
+//        channelCount: count
+//    };
+//    res.json(json);
+//});
 
 // ...........................................................................................
 // POST - Process charge, then show results
