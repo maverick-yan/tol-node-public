@@ -5,7 +5,7 @@ var notify = require('gulp-notify');
 var livereload = require('gulp-livereload');
  
 // Task
-gulp.task('default', function() 
+gulp.task('default', () =>
 {
     // listen for changes
     livereload.listen();
@@ -16,7 +16,7 @@ gulp.task('default', function()
          script: 'bin/www',
 	 ext: 'js'
     })
-    .on('restart', function()
+    .on('restart', () =>
     {
 	// when the app has restarted, run livereload.
 	gulp.src('app.js')

@@ -8,12 +8,12 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev-old": "nodemon server.js",
     "dev": "sudo DEBUG=express:* gulp",
-    "forever": "sudo forever -p ~/tol-node-public/tol2 --pidFile ~/tol-node-public/tol2/tol-node-public-55555.pid --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
-    "foreverDebug": "sudo DEBUG=express:* forever -p ~/tol-node-public/tol2 --pidFile ~/tol-node-public/tol2/tol-node-public-55555.pid --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
+    "forever": "sudo forever start --pidFile  ~/tol-node-public/tol2/bin/tol-node-public-55555.pid -l ~/tol-node-public/tol2/logs/forever.log -a -o ~/tol-node-public/tol2/logs/out.log -e ~/tol-node-public/tol2/logs/err.log ./bin/www && sleep 2 && sudo forever list",
+    "forever-old": "sudo forever -p ~/tol-node-public/tol2 --pidFile ~/tol-node-public/tol2/tol-node-public-55555.pid --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
     "restart": "sudo npm run kill && sudo npm run forever",
     "restart-debug": "sudo npm run kill && sudo npm run debug",
-    "kill": "killall -9 node",
-    "kill2": "sudo forever stop --pidFile ./tol-node-public-55555.pid"
+    "killall": "killall -9 node",
+    "kill": "sudo forever stop --pidFile ./bin/tol-node-public-55555.pid"
   },
   "dependencies": {
     "body-parser": "~1.16.1",
@@ -36,7 +36,8 @@
     "serve-favicon": "~2.3.0",
     "stripe": "^4.18.0",
     "type-of": "^2.0.1",
-    "uws": "^0.14.5"
+    "uws": "^0.14.5",
+    "winston": "^2.3.1"
   },
   "devDependencies": {
     "forever": "^0.15.3",
@@ -45,6 +46,7 @@
     "gulp-nodemon": "^2.2.1",
     "gulp-notify": "^3.0.0",
     "nodemon": "^1.10.2",
-    "reload": "^1.1.2"
+    "reload": "^1.1.2",
+    "winston": "^2.3.1"
   }
 }

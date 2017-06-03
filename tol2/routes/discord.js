@@ -5,6 +5,7 @@ var fs = require('fs');
 var cors = require('cors');
 var express = require('express');
 var request = require('request');
+var winston = require('winston');
 var Discord = require('discord.js');
 var client = new Discord.Client();
 // var rp = require('request-promise');
@@ -13,6 +14,10 @@ var tolCommon = require('./scripts/tolCommon');
 var tolMailer = require('./mailer');
 var stripe = require('./stripe');
 
+// ...........................................................................................
+// Logs
+winston.add(winston.transports.File, { filename: 'logs.log' });
+// winston.remove(winston.transports.Console);
 // ...........................................................................................
 // cors
 var whitelist =
@@ -52,6 +57,7 @@ var discordBotSecrets = secretKeys.discordBot;
  https://www.npmjs.com/package/discord-webhooks
  */
 var DISCORD_DEBUG = false;
+var ENABLE_BOT = true;
 
 var xbladeUserJson =
 {
@@ -93,27 +99,54 @@ var tolGuild =
 // ############################################################################################
 // Discord callbacks >>
 var rdy = false;
+
+// ...........................................................................................
 client.on('ready', () =>
 {
     rdy = true;
-    console.log(`[Discord.js] Logged in as ${client.user.username}!`);
-    // client.user.setStatus('online', 'test');
+    winston.info('[d.js] Connected!');
 });
 
+// ...........................................................................................
+client.on('disconnect', event =>
+{
+    rdy = false;
+    if (event.code === 1000)
+    {
+        winston.warning('[d.js] Disconnected (gracefully)! event.code: ' + event.code);
+        // Restart if disconnect code is 1000 (gracefully exited) because it won't reconnect automatically
+        client.destroy().then(() => client.login(discordBotSecrets.token));
+    }
+    else
+    {
+        winston.error(`[d.js] Disconnected with WS error code ${event.code}, Logged!`);
+
+        // Stop on other critical errors
+        //process.exit(0);
+    }
+});
+
+// ...........................................................................................
 client.on('message', msg =>
 {
-    if (msg.content === 'ping')
+    if (msg.content === '.ping')
     {
         msg.reply('Pong!');
     }
 });
 
+// ...........................................................................................
+if (ENABLE_BOT)
+    client.login(discordBotSecrets.token);
+
+// ...........................................................................................
 function getGuildById(id)
 {
     var g = client.guilds.get(id);
     console.log('[Discord.js] GUILD ' + g.name + ' == ' + tolCommon.J(g));
     return g;
 }
+// ...........................................................................................
 function getChannelById(guildId, channelId)
 {
     var g = getGuildById(guildId);
@@ -122,20 +155,36 @@ function getChannelById(guildId, channelId)
     return c;
 }
 
+// ...........................................................................................
 function getMyGuild()
 {
     var g = client.guilds.get(tolGuild.guild_id);
-    console.log('[Discord.js] myGuild == ' + tolCommon.J(g));
+    // console.log('[Discord.js] myGuild == ' + tolCommon.J(g));
     return g;
 }
+
+// ...........................................................................................
 function getLFGChannel()
 {
     var c = getMyGuild().channels.get(tolGuild.channels.looking_for_game);
-    console.log('[Discord.js] LFG Channel == ' + tolCommon.J(c));
+    // console.log('[Discord.js] LFG Channel == ' + tolCommon.J(c));
     return c;
 }
 
-client.login(discordBotSecrets.token);
+// ...........................................................................................
+function checkBotOnline(res, forceFail)
+{
+    if (!ENABLE_BOT || !rdy || forceFail)
+    {
+        console.error('[d.js]**ERR: Discord is disabled/offline! Aborting.');
+        var json = {
+            err: 'Discord is disabled/offline! Aborting.'
+        };
+        res.status(500).json(json);
+    }
+    else
+        return true; // Online/ready!
+}
 
 // ############################################################################################
 // Routes >>
@@ -152,6 +201,9 @@ router.get('/webhook/', (req, res) =>
 // GET: Guild general info
 router.get('/guild', (req, res) =>
 {
+    if (!checkBotOnline(res))
+        return;
+
     var g = getMyGuild();
     var json = {
         Guild: g
@@ -163,11 +215,16 @@ router.get('/guild', (req, res) =>
 // GET: count/guild
 router.get('/guild/count', (req, res) =>
 {
+    console.log('[d.js] @ "/guild/online". Checking if online...');
+    if (!checkBotOnline(res))
+        return;
+
     var count = getMyGuild().memberCount;
     console.log('Guild Member Count: ' + count);
     var json = {
         memberCount: count
     };
+    client.disconnect();
     res.json(json);
 });
 
@@ -175,6 +232,9 @@ router.get('/guild/count', (req, res) =>
 // GET: Guild LFG channel info
 router.get('/guild/channel/lfg', (req, res) =>
 {
+    if (!checkBotOnline(res))
+        return;
+
     var c = getLFGChannel();
 
     var json = {
@@ -184,26 +244,26 @@ router.get('/guild/channel/lfg', (req, res) =>
 });
 
 // .............................................................................
-// GET: LFG channel count
-router.get('/guild/channel/lfg/count', (req, res) =>
+// GET: Guild online count
+var returnFalse = true; // Test
+router.get('/guild/online', (req, res) =>
 {
-    var g = getMyGuild();
-    var c = getLFGChannel();
-    var count = 0;
+    console.log('[d.js] @ "/guild/online". Checking if online...');
 
-    // for (const member of g.members.values())
-    // {
-    //     if (members[i].client.status === 0)
-    //         count++;
-    // }
+    var forceFailForTesting = true;
+    if (!checkBotOnline(res, forceFailForTesting))
+        return;
+
+    console.log('[d.js] Online and ready for "/guild/status"!');
+    var g = getMyGuild();
     var onlineMembers = g.members.filter(m => m.presence.status === 'online').size;
 
-    // var onlineMembers = g.members.findAll('status', 0);
-
-    var json = {
-        channelCount: onlineMembers
+    var data = {
+        onlineCount: onlineMembers
     };
-    res.json(json);
+    res.json(data);
+
+    console.log('[d.js] Done. onlineMembers==' + onlineMembers);
 });
 
 // .............................................................................
