@@ -10,8 +10,8 @@
     "dev": "sudo DEBUG=express:* gulp",
     "forever": "sudo forever start --pidFile  ~/tol-node-public/tol2/bin/tol-node-public-55555.pid -l ~/tol-node-public/tol2/logs/forever.log -a -o ~/tol-node-public/tol2/logs/out.log -e ~/tol-node-public/tol2/logs/err.log ./bin/www && sleep 2 && sudo forever list",
     "forever-old": "sudo forever -p ~/tol-node-public/tol2 --pidFile ~/tol-node-public/tol2/tol-node-public-55555.pid --minUptime 3000 --spinSleepTime 3000 -a start -c 'nodemon --exitcrash --delay 10' ./bin/www -o ./logs/out.log -e ./logs/err.log && sleep 2 && sudo forever list",
-    "restart": "sudo npm run kill && sudo npm run forever",
-    "restart-debug": "sudo npm run kill && sudo npm run debug",
+    "restart-forever": "sudo npm run kill && sudo npm run forever",
+    "restart-dev": "sudo npm run kill && sudo npm run dev",
     "killall": "killall -9 node",
     "kill": "sudo forever stop --pidFile ./bin/tol-node-public-55555.pid"
   },

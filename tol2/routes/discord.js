@@ -250,7 +250,7 @@ router.get('/guild/online', (req, res) =>
 {
     console.log('[d.js] @ "/guild/online". Checking if online...');
 
-    var forceFailForTesting = true;
+    var forceFailForTesting = false;
     if (!checkBotOnline(res, forceFailForTesting))
         return;
 
@@ -278,59 +278,6 @@ router.get('/guild/online', (req, res) =>
 //    };
 //    res.json(json);
 //});
-
-// ...........................................................................................
-// POST - Process charge, then show results
-// router.post('/webhook/stripe', (req, res) =>
-// {
-//     console.log('[DISCORD] @ /webhook/stripe POST');
-//     console.log('[Webhook] params == ' + tolCommon.J(req.params));
-//     console.log('[Webhook] body == ' + tolCommon.J(req.body));
-//
-//     // Retrieve the request's body and parse it as JSON
-//     // var event_json = JSON.parse(req.body);
-//     console.log('[Discord-Hook] Verifying Stripe token...');
-//
-//     var results = {};
-//
-//     // 1 - Verify Stripe event
-//     stripe.stripeVerifyEvent(req.body)
-//     .then((verifyResult) =>
-//     // 2 - Verified the result
-//     {
-//         console.log('[Discord-Hook] verifyResult==' + verifyResult);
-//         results.verify = verifyResult;
-//
-//         if (!verifyResult)
-//             return Promise.reject("Unverified - Aborting!");
-//
-//         // return sendStripeHook(verifyResult);
-//         return stripeGetBalance();
-//     }).then((balance) =>
-//     // 3 - Got balance
-//     {
-//         console.log('[Discord-Hook] "POST() webhook/stripe" balance==' + balance);
-//         results.balance = balance;
-//         return sendStripeHook(verifyResult, balance);
-//     }).then((err, discordRes, body) =>
-//     {
-//         // 4 - Sent Discord webhook
-//         if (err)
-//         {
-//             handleWebhookErr(err, res);
-//             return Promise.reject("Unverified - Aborting!");
-//         }
-//
-//         // 5 - Return status
-//         console.log('[Discord-Hook] Completed!');
-//         res.sendStatus(200);
-//     }).catch((err) =>
-//     {
-//         console.log("ERR: " + err);
-//         res.sendStatus(201); // We still send 200 since it's a webhook. 201 to show weirdness.
-//         // stripeMockSuccess(res);
-//     });
-// });
 
 // ############################################################################################
 // funcs >>
