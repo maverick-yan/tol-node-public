@@ -166,7 +166,7 @@ router.get('/iptest', (req, res) =>
 
 // ...........................................................................................
 // POST - Process charge, then show results
-router.post('/charge/:name', cors(corsOptions), function(req, res)
+router.post('/charge/:name', cors(corsOptions), (req, res) =>
 {
     console.log( '[Stripe] params == ' + tolCommon.J(req.params) );
     console.log( '[Stripe] body == ' + tolCommon.J(req.body) );

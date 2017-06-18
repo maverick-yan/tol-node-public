@@ -38,6 +38,7 @@ router.options(whitelist, cors()); // include before other routes
 var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 var discordWebhookUrls = secretKeys.discordWebhookUrls;
 var discordBotSecrets = secretKeys.discordBot;
+var unitySecret = secretKeys.unitySecret;
 
 // ############################################################################################
 // Discord setup >>
@@ -85,7 +86,12 @@ var tolGuild =
     channels:
     {
         mod_chat: '303924561659822080',
-        looking_for_game: '300527038983569409'
+        looking_for_game: '300527038983569409',
+        lfg_announcements: '325103208580120597'
+    },
+    roles:
+    {
+        lfg: '325185744668983297'
     }
 }
 
@@ -131,7 +137,10 @@ client.on('message', msg =>
 {
     if (msg.content === '.ping')
     {
-        msg.reply('Pong!');
+        if (!IS_BETA)
+            msg.reply('Pong!');
+        else
+            msg.reply('[Test] Pong!');
     }
 });
 
@@ -164,6 +173,14 @@ function getMyGuild()
 }
 
 // ...........................................................................................
+function getLFGAnnouncementsChannel()
+{
+    var c = getMyGuild().channels.get(tolGuild.channels.lfg_announcements);
+    // console.log('[Discord.js] LFG Channel == ' + tolCommon.J(c));
+    return c;
+}
+
+// ...........................................................................................
 function getLFGChannel()
 {
     var c = getMyGuild().channels.get(tolGuild.channels.looking_for_game);
@@ -190,12 +207,171 @@ function checkBotOnline(res, forceFail)
 // Routes >>
 // ...........................................................................................
 // GET: Discord test
-router.get('/webhook/', (req, res) =>
+// router.get('/webhook', (req, res) =>
+// {
+//     //discordTest(res);
+//     stripe.stripeTest();
+//     res.json({status: "ONLINE"});
+// });
+
+// ...........................................................................................
+// POST: Live webhook handling
+router.post('/announcelfgcreate', (req, res) =>
 {
-    //discordTest(res);
-    stripe.stripeTest();
-    res.json({status: "ONLINE"});
+    console.log('[d.js] @ /announcelfgcreate/');
+
+    // Body
+    var secret = req.body.unitySecret;
+    var minPlayers = req.body.minPlayers;
+    var maxPlayers = req.body.maxPlayers;
+    var curPlayers = req.body.curPlayers;
+    var gameMode = req.body.gameMode;
+    var playerName = req.body.playerName;
+
+    // Validate
+    console.log('[d.js] Validating announcelfgcreate...');
+    if (!checkBotOnline(res))
+    {
+        returnFail(res, 'BOT offline');
+        return;
+    }
+    if (secret !== unitySecret)
+    {
+        returnFail(res, 'Invalid Secret');
+        return;
+    }
+
+    // Setup embed dynamically
+    console.log('BOT Online: Create embed');
+    var avatarImg = 'https://vignette2.wikia.nocookie.net/tol1879/images/d/d6/Killer-Type.png';
+
+    var casualImg = 'https://i.imgur.com/4lSTVOg.png';
+    var aftermathImg = 'https://i.imgur.com/bUGYFy4.png';
+    var img = casualImg;
+    if (gameMode === "Aftermath")
+        img = aftermathImg;
+
+    var launchSteamURL = 'http://throneofli.es/play'; // steam://rungameid/595280';
+    const embed = new Discord.RichEmbed()
+        .setColor('RED')
+        .setTitle(`>> Join ${playerName}: PLAY NOW <<`)
+        // .setDescription('%USER% has created a new game!')
+        .setAuthor(`${curPlayers}/${maxPlayers} Players (Min: ${minPlayers})`, avatarImg)
+        .setURL(launchSteamURL)
+        .setImage(img)
+        .setFooter('^ Link directly launches the game');
+
+    // console.log('embed ==' + tolCommon.J(embed));
+    var c = getLFGChannel();
+
+    sendEmbed(c, embed, res);
 });
+
+// ...........................................................................................
+// POST: Live webhook handling
+router.post('/announcelfgjoin', (req, res) =>
+{
+    console.log('[d.js] @ /announcelfgjoin/');
+
+    // Body
+    var secret = req.body.unitySecret;
+    var minPlayers = req.body.minPlayers;
+    var maxPlayers = req.body.maxPlayers;
+    var curPlayers = req.body.curPlayers;
+    var gameMode = req.body.gameMode;
+    var playerName = req.body.playerName;
+
+    // Validate
+    console.log('[d.js] Validating announcelfgjoin...');
+    if (!checkBotOnline(res))
+    {
+        returnFail(res, 'BOT offline');
+        return;
+    }
+    if (secret !== unitySecret)
+    {
+        returnFail(res, 'Invalid Secret');
+        return;
+    }
+
+    // Setup embed dynamically
+    console.log('BOT Online: Create embed');
+    var avatarImg = 'https://vignette3.wikia.nocookie.net/tol1879/images/f/f9/Support-Type.png';
+
+    var casualImg = 'https://i.imgur.com/4lSTVOg.png';
+    var aftermathImg = 'https://i.imgur.com/bUGYFy4.png';
+    var img = casualImg;
+    if (gameMode === "Aftermath")
+        img = aftermathImg;
+
+    // Determine color of left side bar
+    var myColor = '#ffff00'; // yellow
+    if (curPlayers >= minPlayers)
+        myColor = 'GREEN';
+
+    var launchSteamURL = 'http://throneofli.es/play'; // steam://rungameid/595280';
+    const embed = new Discord.RichEmbed()
+        .setColor(myColor) // Yellow or Green
+        .setTitle(`>> Join ${playerName} + others: PLAY NOW <<`)
+        // .setDescription('%USER% has created a new game!')
+        .setAuthor(`${curPlayers}/${maxPlayers} Players (Min: ${minPlayers})`, avatarImg)
+        .setURL(launchSteamURL)
+        .setImage(img)
+        .setFooter('^ Link directly launches the game');
+
+    // console.log('embed ==' + tolCommon.J(embed));
+    var c = getLFGChannel();
+
+    sendEmbed(c, embed, res);
+});
+
+// .............................................................................
+function sendEmbed(channel, embed, res)
+{
+    console.log('@ sendEmbed');
+
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    // Validate
+    var errMsg = "";
+    if (!channel)
+    {
+        returnFail(res, 'Invalid channel');
+        return;
+    }
+    if (!embed)
+    {
+        returnFail(res, 'Invalid embed');
+        return;
+    }
+    if (!res)
+    {
+        returnFail(res, 'Invalid res');
+        return;
+    }
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+    // TODO: Edit the original!
+    // var lastEmbed = client.user.lastMessage.embeds[0];
+
+    console.log('embed == ' + embed);
+    channel.send({ embed }).then(hookRes =>
+    {
+        // Success >>
+        console.log('Success: ' + hookRes); // Repeats msg sent
+
+        var data = {
+            success: true
+        };
+
+        res.json(data);
+    })
+    .catch(err =>
+    {
+        // ERR >>
+        console.error('Err: ' + err);
+        res.sendStatus(500).send({error: err});
+    });
+}
 
 // .............................................................................
 // GET: Guild general info
@@ -281,6 +457,18 @@ router.get('/guild/online', (req, res) =>
 
 // ############################################################################################
 // funcs >>
+// ...........................................................................................
+function returnFail(res, error)
+{
+    // Validate
+    if (!error)
+        error = { err: 'Unknown Error' };
+    else
+        error = { err: error};
+
+    res.status(500).send(error);
+}
+
 // ...........................................................................................
 function getOptions(uri, json)
 {
@@ -369,6 +557,15 @@ function discordTest(res)
      */
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     console.log("[Discord-Hook] Done");
+}
+
+// ...........................................................................................
+// TODO
+function sendExternalWebhook()
+{
+    if (DISCORD_DEBUG) console.log('[Discord-Hook] @ sendGeneralWebhook()');
+
+    // var uri =
 }
 
 // ...........................................................................................

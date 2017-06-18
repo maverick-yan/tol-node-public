@@ -13,7 +13,7 @@
     "restart-forever": "sudo npm run kill && sudo npm run forever",
     "restart-dev": "sudo npm run kill && sudo npm run dev",
     "killall": "killall -9 node",
-    "kill": "sudo forever stop --pidFile ./bin/tol-node-public-55555.pid"
+    "kill": "sudo forever stop ./bin/www"
   },
   "dependencies": {
     "body-parser": "~1.16.1",

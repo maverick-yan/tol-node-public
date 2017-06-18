@@ -15,10 +15,26 @@ block content
   p
     | You should receive your receipt + Throne of Lies Steam key to #{email} within 10 minutes.
   p
-    | While waiting, we invite you to our 
+    | While waiting, we invite you to our&nbsp;
     a(href='https://discord.gg/gvNbRSB' target='_blank') Discord
     |  (Required for Alpha/Beta) and 
     a(href='https://forum.imperium42.com' target='_blank') Forum
     |  (Optional)
-script(src='/js/analytics-convert-999.js')
-script(src='/js/fbpixelconvert.js')
+  script(src='https://api.throneoflies.com/js/fbpixelconvert.js')
+  noscript
+    img(height='1', width='1', style='display:none', src='https://www.facebook.com/tr?id=360169631027193&ev=PageView&noscript=1')
+  script.
+    // Google Code for Stripe_Game_Purchase_9.99 Conversion Page
+    /* <![CDATA[ */
+    var google_conversion_id = 982378556;
+    var google_conversion_language = "en";
+    var google_conversion_format = "3";
+    var google_conversion_color = "ffffff";
+    var google_conversion_label = "vBuRCLf823AQvNC31AM";
+    var google_remarketing_only = false;
+    /* ]]> */
+    console.log('Google Analaytics loaded, if no errs ^');
+  script(src='https://www.googleadservices.com/pagead/conversion.js')
+  noscript
+    div(style={display: 'inline'})
+      img(height='1', width='1', style='border-style:none', alt="", src='https://www.googleadservices.com/pagead/conversion/982378556/?label=vBuRCLf823AQvNC31AM&amp;guid=ON&amp;script=0')

@@ -18,6 +18,7 @@ var corsOptions = {
 router.options(whitelist, cors()); // include before other routes
 
 // Read JSON keys file sync - You need to edit ./data/secret-keys-json with your own title+secret
+// var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 
 // GET - Test (root)
