@@ -5,6 +5,7 @@ var fs = require('fs');
 var cors = require('cors');
 var express = require('express');
 var request = require('request');
+var winston = require('winston');
 var Discord = require('discord.js');
 var client = new Discord.Client();
 // var rp = require('request-promise');
@@ -13,6 +14,10 @@ var tolCommon = require('./scripts/tolCommon');
 var tolMailer = require('./mailer');
 var stripe = require('./stripe');
 
+// ...........................................................................................
+// Logs
+winston.add(winston.transports.File, { filename: 'logs.log' });
+// winston.remove(winston.transports.Console);
 // ...........................................................................................
 // cors
 var whitelist =
@@ -33,6 +38,7 @@ router.options(whitelist, cors()); // include before other routes
 var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 var discordWebhookUrls = secretKeys.discordWebhookUrls;
 var discordBotSecrets = secretKeys.discordBot;
+var unitySecret = secretKeys.unitySecret;
 
 // ############################################################################################
 // Discord setup >>
@@ -52,6 +58,7 @@ var discordBotSecrets = secretKeys.discordBot;
  https://www.npmjs.com/package/discord-webhooks
  */
 var DISCORD_DEBUG = false;
+var ENABLE_BOT = true;
 
 var xbladeUserJson =
 {
@@ -93,27 +100,57 @@ var tolGuild =
 // ############################################################################################
 // Discord callbacks >>
 var rdy = false;
+
+// ...........................................................................................
 client.on('ready', () =>
 {
     rdy = true;
-    console.log(`[Discord.js] Logged in as ${client.user.username}!`);
-    // client.user.setStatus('online', 'test');
+    winston.info('[d.js] Connected!');
 });
 
-client.on('message', msg =>
+// ...........................................................................................
+client.on('disconnect', event =>
 {
-    if (msg.content === 'ping')
+    rdy = false;
+    if (event.code === 1000)
     {
-        msg.reply('Pong!');
+        winston.warning('[d.js] Disconnected (gracefully)! event.code: ' + event.code);
+        // Restart if disconnect code is 1000 (gracefully exited) because it won't reconnect automatically
+        client.destroy().then(() => client.login(discordBotSecrets.token));
+    }
+    else
+    {
+        winston.error(`[d.js] Disconnected with WS error code ${event.code}, Logged!`);
+
+        // Stop on other critical errors
+        //process.exit(0);
     }
 });
 
+// ...........................................................................................
+client.on('message', msg =>
+{
+    if (msg.content === '.ping')
+    {
+        if (!IS_BETA)
+            msg.reply('Pong!');
+        else
+            msg.reply('[Test] Pong!');
+    }
+});
+
+// ...........................................................................................
+if (ENABLE_BOT)
+    client.login(discordBotSecrets.token);
+
+// ...........................................................................................
 function getGuildById(id)
 {
     var g = client.guilds.get(id);
     console.log('[Discord.js] GUILD ' + g.name + ' == ' + tolCommon.J(g));
     return g;
 }
+// ...........................................................................................
 function getChannelById(guildId, channelId)
 {
     var g = getGuildById(guildId);
@@ -122,36 +159,211 @@ function getChannelById(guildId, channelId)
     return c;
 }
 
+// ...........................................................................................
 function getMyGuild()
 {
     var g = client.guilds.get(tolGuild.guild_id);
-    console.log('[Discord.js] myGuild == ' + tolCommon.J(g));
+    // console.log('[Discord.js] myGuild == ' + tolCommon.J(g));
     return g;
 }
+
+// ...........................................................................................
 function getLFGChannel()
 {
     var c = getMyGuild().channels.get(tolGuild.channels.looking_for_game);
-    console.log('[Discord.js] LFG Channel == ' + tolCommon.J(c));
+    // console.log('[Discord.js] LFG Channel == ' + tolCommon.J(c));
     return c;
 }
 
-client.login(discordBotSecrets.token);
+// ...........................................................................................
+function checkBotOnline(res, forceFail)
+{
+    if (!ENABLE_BOT || !rdy || forceFail)
+    {
+        console.error('[d.js]**ERR: Discord is disabled/offline! Aborting.');
+        var json = {
+            err: 'Discord is disabled/offline! Aborting.'
+        };
+        res.status(500).json(json);
+    }
+    else
+        return true; // Online/ready!
+}
 
 // ############################################################################################
 // Routes >>
 // ...........................................................................................
 // GET: Discord test
-router.get('/webhook/', (req, res) =>
+// router.get('/webhook', (req, res) =>
+// {
+//     //discordTest(res);
+//     stripe.stripeTest();
+//     res.json({status: "ONLINE"});
+// });
+
+// ...........................................................................................
+// POST: Live webhook handling
+router.post('/announcelfgcreate', (req, res) =>
 {
-    //discordTest(res);
-    stripe.stripeTest();
-    res.json({status: "ONLINE"});
+    console.log('[d.js] @ /announcelfgcreate/');
+
+    // Body
+    var secret = req.body.unitySecret;
+    var minPlayers = req.body.minPlayers;
+    var maxPlayers = req.body.maxPlayers;
+    var curPlayers = req.body.curPlayers;
+    var gameMode = req.body.gameMode;
+    var playerName = req.body.playerName;
+
+    // Validate
+    console.log('[d.js] Validating announcelfgcreate...');
+    if (!checkBotOnline(res))
+    {
+        returnFail(res, 'BOT offline');
+        return;
+    }
+    if (secret !== unitySecret)
+    {
+        returnFail(res, 'Invalid Secret');
+        return;
+    }
+
+    // Setup embed dynamically
+    console.log('BOT Online: Create embed');
+    var avatarImg = 'https://vignette2.wikia.nocookie.net/tol1879/images/d/d6/Killer-Type.png';
+
+    var casualImg = 'https://i.imgur.com/4lSTVOg.png';
+    var aftermathImg = 'https://i.imgur.com/bUGYFy4.png';
+    var img = casualImg;
+    if (gameMode === "Aftermath")
+        img = aftermathImg;
+
+    var launchSteamURL = 'http://throneofli.es/play'; // steam://rungameid/595280';
+    const embed = new Discord.RichEmbed()
+        .setColor('RED')
+        .setTitle(`>> Join ${playerName}: PLAY NOW <<`)
+        // .setDescription('%USER% has created a new game!')
+        .setAuthor(`${curPlayers}/${maxPlayers} Players (Min: ${minPlayers})`, avatarImg)
+        .setURL(launchSteamURL)
+        .setImage(img)
+        .setFooter('^ Link directly launches the game');
+
+    // console.log('embed ==' + tolCommon.J(embed));
+    var c = getLFGChannel();
+
+    sendEmbed(c, embed, res);
 });
+
+// ...........................................................................................
+// POST: Live webhook handling
+router.post('/announcelfgjoin', (req, res) =>
+{
+    console.log('[d.js] @ /announcelfgjoin/');
+
+    // Body
+    var secret = req.body.unitySecret;
+    var minPlayers = req.body.minPlayers;
+    var maxPlayers = req.body.maxPlayers;
+    var curPlayers = req.body.curPlayers;
+    var gameMode = req.body.gameMode;
+    var playerName = req.body.playerName;
+
+    // Validate
+    console.log('[d.js] Validating announcelfgjoin...');
+    if (!checkBotOnline(res))
+    {
+        returnFail(res, 'BOT offline');
+        return;
+    }
+    if (secret !== unitySecret)
+    {
+        returnFail(res, 'Invalid Secret');
+        return;
+    }
+
+    // Setup embed dynamically
+    console.log('BOT Online: Create embed');
+    var avatarImg = 'https://vignette3.wikia.nocookie.net/tol1879/images/f/f9/Support-Type.png';
+
+    var casualImg = 'https://i.imgur.com/4lSTVOg.png';
+    var aftermathImg = 'https://i.imgur.com/bUGYFy4.png';
+    var img = casualImg;
+    if (gameMode === "Aftermath")
+        img = aftermathImg;
+
+    // Determine color of left side bar
+    var myColor = '#ffff00'; // yellow
+    if (curPlayers >= minPlayers)
+        myColor = 'GREEN';
+
+    var launchSteamURL = 'http://throneofli.es/play'; // steam://rungameid/595280';
+    const embed = new Discord.RichEmbed()
+        .setColor(myColor) // Yellow or Green
+        .setTitle(`>> Join ${playerName} + others: PLAY NOW <<`)
+        // .setDescription('%USER% has created a new game!')
+        .setAuthor(`${curPlayers}/${maxPlayers} Players (Min: ${minPlayers})`, avatarImg)
+        .setURL(launchSteamURL)
+        .setImage(img)
+        .setFooter('^ Link directly launches the game');
+
+    // console.log('embed ==' + tolCommon.J(embed));
+    var c = getLFGChannel();
+
+    sendEmbed(c, embed, res);
+});
+
+// .............................................................................
+function sendEmbed(channel, embed, res)
+{
+    console.log('@ sendEmbed');
+
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    // Validate
+    var errMsg = "";
+    if (!channel)
+    {
+        returnFail(res, 'Invalid channel');
+        return;
+    }
+    if (!embed)
+    {
+        returnFail(res, 'Invalid embed');
+        return;
+    }
+    if (!res)
+    {
+        returnFail(res, 'Invalid res');
+        return;
+    }
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+    console.log('embed == ' + embed);
+    channel.send({ embed }).then(hookRes =>
+    {
+        // Success >>
+        console.log('Success: ' + hookRes); // Repeats msg sent
+
+        var data = {
+            success: true
+        };
+
+        res.json(data);
+    })
+    .catch(err =>
+    {
+        // ERR >>
+        console.error('Err: ' + err);
+        res.sendStatus(500).send({error: err});
+    });
+}
 
 // .............................................................................
 // GET: Guild general info
 router.get('/guild', (req, res) =>
 {
+    if (!checkBotOnline(res))
+        return;
+
     var g = getMyGuild();
     var json = {
         Guild: g
@@ -163,11 +375,16 @@ router.get('/guild', (req, res) =>
 // GET: count/guild
 router.get('/guild/count', (req, res) =>
 {
+    console.log('[d.js] @ "/guild/online". Checking if online...');
+    if (!checkBotOnline(res))
+        return;
+
     var count = getMyGuild().memberCount;
     console.log('Guild Member Count: ' + count);
     var json = {
         memberCount: count
     };
+    client.disconnect();
     res.json(json);
 });
 
@@ -175,6 +392,9 @@ router.get('/guild/count', (req, res) =>
 // GET: Guild LFG channel info
 router.get('/guild/channel/lfg', (req, res) =>
 {
+    if (!checkBotOnline(res))
+        return;
+
     var c = getLFGChannel();
 
     var json = {
@@ -184,26 +404,26 @@ router.get('/guild/channel/lfg', (req, res) =>
 });
 
 // .............................................................................
-// GET: LFG channel count
-router.get('/guild/channel/lfg/count', (req, res) =>
+// GET: Guild online count
+var returnFalse = true; // Test
+router.get('/guild/online', (req, res) =>
 {
-    var g = getMyGuild();
-    var c = getLFGChannel();
-    var count = 0;
+    console.log('[d.js] @ "/guild/online". Checking if online...');
 
-    // for (const member of g.members.values())
-    // {
-    //     if (members[i].client.status === 0)
-    //         count++;
-    // }
+    var forceFailForTesting = false;
+    if (!checkBotOnline(res, forceFailForTesting))
+        return;
+
+    console.log('[d.js] Online and ready for "/guild/status"!');
+    var g = getMyGuild();
     var onlineMembers = g.members.filter(m => m.presence.status === 'online').size;
 
-    // var onlineMembers = g.members.findAll('status', 0);
-
-    var json = {
-        channelCount: onlineMembers
+    var data = {
+        onlineCount: onlineMembers
     };
-    res.json(json);
+    res.json(data);
+
+    console.log('[d.js] Done. onlineMembers==' + onlineMembers);
 });
 
 // .............................................................................
@@ -219,61 +439,20 @@ router.get('/guild/channel/lfg/count', (req, res) =>
 //    res.json(json);
 //});
 
-// ...........................................................................................
-// POST - Process charge, then show results
-// router.post('/webhook/stripe', (req, res) =>
-// {
-//     console.log('[DISCORD] @ /webhook/stripe POST');
-//     console.log('[Webhook] params == ' + tolCommon.J(req.params));
-//     console.log('[Webhook] body == ' + tolCommon.J(req.body));
-//
-//     // Retrieve the request's body and parse it as JSON
-//     // var event_json = JSON.parse(req.body);
-//     console.log('[Discord-Hook] Verifying Stripe token...');
-//
-//     var results = {};
-//
-//     // 1 - Verify Stripe event
-//     stripe.stripeVerifyEvent(req.body)
-//     .then((verifyResult) =>
-//     // 2 - Verified the result
-//     {
-//         console.log('[Discord-Hook] verifyResult==' + verifyResult);
-//         results.verify = verifyResult;
-//
-//         if (!verifyResult)
-//             return Promise.reject("Unverified - Aborting!");
-//
-//         // return sendStripeHook(verifyResult);
-//         return stripeGetBalance();
-//     }).then((balance) =>
-//     // 3 - Got balance
-//     {
-//         console.log('[Discord-Hook] "POST() webhook/stripe" balance==' + balance);
-//         results.balance = balance;
-//         return sendStripeHook(verifyResult, balance);
-//     }).then((err, discordRes, body) =>
-//     {
-//         // 4 - Sent Discord webhook
-//         if (err)
-//         {
-//             handleWebhookErr(err, res);
-//             return Promise.reject("Unverified - Aborting!");
-//         }
-//
-//         // 5 - Return status
-//         console.log('[Discord-Hook] Completed!');
-//         res.sendStatus(200);
-//     }).catch((err) =>
-//     {
-//         console.log("ERR: " + err);
-//         res.sendStatus(201); // We still send 200 since it's a webhook. 201 to show weirdness.
-//         // stripeMockSuccess(res);
-//     });
-// });
-
 // ############################################################################################
 // funcs >>
+// ...........................................................................................
+function returnFail(res, error)
+{
+    // Validate
+    if (!error)
+        error = { err: 'Unknown Error' };
+    else
+        error = { err: error};
+
+    res.status(500).send(error);
+}
+
 // ...........................................................................................
 function getOptions(uri, json)
 {
@@ -362,6 +541,15 @@ function discordTest(res)
      */
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     console.log("[Discord-Hook] Done");
+}
+
+// ...........................................................................................
+// TODO
+function sendExternalWebhook()
+{
+    if (DISCORD_DEBUG) console.log('[Discord-Hook] @ sendGeneralWebhook()');
+
+    // var uri =
 }
 
 // ...........................................................................................

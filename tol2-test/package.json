@@ -14,7 +14,7 @@
     "restart": "sudo npm run kill && sudo npm run forever",
     "restart-debug": "sudo npm run kill && sudo npm run debug",
     "killall": "killall -9 node",
-    "kill": "sudo forever stop `cat ./bin/tol-node-public-TEST-55556.pid`"
+    "kill": "sudo forever stop ./bin/www"
   },
   "dependencies": {
     "body-parser": "~1.16.1",
