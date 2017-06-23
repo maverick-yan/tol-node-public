@@ -534,5 +534,6 @@ function GetDateTime() {
 // module.exports = router;
 module.exports =
 {
-    myRouter: router
+    myRouter: router,
+    sendEmail: SparkSendEmail
 };

@@ -116,8 +116,15 @@ var rdy = false;
 // ...........................................................................................
 client.on('ready', () =>
 {
-    rdy = true;
-    winston.info('[d.js] Connected!');
+    client.user.setGame('Throne of Lies').then(clientUser =>
+    {
+        rdy = true;
+        winston.info('[d.js] Connected!');
+    })
+    .catch(err =>
+    {
+        winston.error('[d.js] Failed to set game: ' + err);
+    });
 });
 
 // ...........................................................................................
@@ -209,10 +216,8 @@ function checkBotOnline(res, forceFail)
     if (!ENABLE_BOT || !rdy || forceFail)
     {
         console.error('[d.js]**ERR: Discord is disabled/offline! Aborting.');
-        var json = {
-            err: 'Discord is disabled/offline! Aborting.'
-        };
-        res.status(500).json(json);
+        var err = 'Discord is disabled/offline! Aborting.';
+        returnFail(res, err);
     }
     else
         return true; // Online/ready!
@@ -257,19 +262,46 @@ function checkBotOnline(res, forceFail)
 // }
 
 // ...........................................................................................
-function createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img)
+function createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img, startedGame)
 {
+    console.log(`[d.js] @ createLFGEmbed: playerName:${playername} // curPlayers:${curPlayers} // 
+    maxPlayers:${maxPlayers} // minPlayers:${minPlayers} // startedGame:${startedGame}`);
+
+    // Get color
+    var color = 'RED';
+    if (curPlayers <= 0)
+        color = 'DARK_PURPLE';
+    else if (curPlayers > 1 && curPlayers < minPlayers)
+        color = '#FFFF00'; // Yellow
+    else if (curPlayers >= minPlayers && curPlayers < maxPlayers)
+        color = 'GREEN';
+    else if (curPlayers >= maxPlayers)
+        color = 'AQUA';
+
+    console.log('[d.js] color == ' + color);
+
+    // Set main embed
     const embed = new Discord.RichEmbed()
-        .setColor('RED')
-        .setTitle(`>> Join ${playerName}: PLAY NOW <<`)
-        .addField('Host:', 'someHostName', true)
-        .addField('2:', '%2%', true)
-        .addField('3:', '%3%', true)
+        .setColor(color)
+        .setTitle(`>> CLICK to Join ${playerName}: Play Now <<`)
+        // .addField('Host:', 'someHostName', true)
+        // .addField('2:', '%2%', true)
+        // .addField('3:', '%3%', true)
         // .setDescription('%USER% has created a new game!')
         .setAuthor(`${curPlayers}/${maxPlayers} Players (Min: ${minPlayers})`, KILLER_AVATAR_IMG)
         .setURL(LAUNCH_STEAM_URL)
         .setImage(img)
         .setFooter('^ Link directly launches the game');
+
+    // Dynamic embeds here
+    if (curPlayers >= minPlayers && !startedGame)
+        embed.addField('READY', '\u200B', true); // \u200B == blank
+    else if (startedGame)
+    {
+        embed
+            .addField('STARTED', '\u200B', true) // \u200B == blank
+            .setTimestamp(timestamp);
+    }
 
     return embed;
 }
@@ -285,9 +317,9 @@ router.get('/test', (req, res) =>
 
 // ...........................................................................................
 // POST: Live webhook handling
-router.post('/announcelfgcreate', (req, res) =>
+router.post('/announcelfg', (req, res) =>
 {
-    console.log('[d.js] @ /announcelfgcreate/');
+    console.log('[d.js] @ /announcelfg');
 
     // Body
     var secret = req.body.unitySecret;
@@ -297,10 +329,11 @@ router.post('/announcelfgcreate', (req, res) =>
     var gameMode = req.body.gameMode;
     var playerName = req.body.playerName;
     var roomName = req.body.roomName;
-    var masterClientName = req.body.masterClientName;
+    var startedGame = req.body.startedGame;
+    // var masterClientName = req.body.masterClientName;
 
     // Validate
-    console.log('[d.js] Validating announcelfgcreate...');
+    console.log('[d.js] Validating announcelfg...');
     if (!checkBotOnline(res))
     {
         returnFail(res, '[d.js] BOT offline');
@@ -312,62 +345,118 @@ router.post('/announcelfgcreate', (req, res) =>
         return;
     }
 
-    // Has this room been posted before?
-    console.log('[d.js] roomName==' + roomName);
+    // Get channel
     //var c = getLFGChannel();
     var c = getBotTestingChannel();
-    var embed;
-    var msgId = lfgDict[roomName];
 
+    // Get game mode img
+    var img = CASUAL_IMG;
+    if (gameMode === "Aftermath")
+        img = AFTERMATH_IMG;
+
+    // Create an new embed with current info
+    var embed = createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img, startedGame);
+    console.log('[d.js] New RichEmbed created! embed.title == ' + embed.title);
+
+    // If a previous room was found, EDIT instead of make a new one
+    var msgId = lfgDict[roomName];
     if (!msgId)
     {
+        // Ensure there isn't 0 people in room
+        if (curPlayers <= 0)
+        {
+            returnSuccess(res);
+            return;
+        }
+
         // New room -- CREATE post : Setup embed dynamically >>
         console.log('[d.js] BOT Online - NO msg id: Create NEW embed');
-
-        // Decide game mode img
-        var img = CASUAL_IMG;
-        if (gameMode === "Aftermath")
-            img = AFTERMATH_IMG;
-
-        embed = createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img);
-        console.log('[d.js] New RichEmbed created! embed.title == ' + embed.title);
+        sendEmbed(c, embed, roomName, res);
     }
     else
     {
         // EXISTING room -- FETCH old embed post : Edit info >>
         console.log('[d.js] BOT Online - FOUND msg id: Edit EXISTING embed');
-        var existingEmbed;
         try
         {
             // https://discord.js.org/#/docs/main/master/class/TextChannel?scrollTo=fetchMessage
             c.fetchMessage(msgId).then(message =>
             {
                 // Get the last embed >> Edit
-                console.log('[d.js] Succesfully retrieved last embed! ' + message.embeds[0]);
                 myOldEmbed = message.embeds[0];
-                console.log('[d.js] myOldEmbed (MessageEmbed) == ' + myOldEmbed);
-                console.log('[d.js] myOldEmbed.title == ' + myOldEmbed.title);
+                console.log('[d.js] Successfully retrieved old embed! myOldEmbed.title == ' + myOldEmbed.title);
 
-                embed = new Discord.RichEmbed(myOldEmbed)
-                    .setColor('AQUA');
-
-                console.log('[d.js] New RichEmbed created! embed.title == ' + embed.title);
-
-                sendEmbed(c, embed, roomName, res);
-                return;
+                return message.edit({ embed });
+            })
+            .then(message =>
+            {
+                // 0 players?
+                if (curPlayers <= 0)
+                {
+                    // 0 Players
+                    console.log('[d.js] curPlayers is 0!');
+                    if (message.deletable)
+                    {
+                        // Deletable
+                        console.log('[d.js] DELETING message in 10s. Returning success now.');
+                        returnSuccess(res);
+                        message.delete(1000*10).then(message =>
+                        {
+                            console.log('[d.js]**Message deleted');
+                        }); // del 10s later
+                    }
+                    else
+                    {
+                        // Not deletable
+                        console.error('[d.js]**WARN: Players are 0 and couldnnt delete last msg. Doing nothing!');
+                        returnSuccess(res);
+                    }
+                }
+                else
+                {
+                    // > 0 players
+                    console.log('[d.js] Successful resend (or delete): ' + message);
+                    returnSuccess(res);
+                }
+            })
+            .catch(err =>
+            {
+               console.error('[d.js] ERR @ announcelfg.resend: ' + err);
+               if (err == 'DiscordAPIError: Unknown Message') // Message deleted
+               {
+                   // Make a new one, instead
+                   console.log('[d.js] WARN @ announcelfg.resend: Couldnt edit (deleted?), Making NEW embed');
+                   sendEmbed(c, embed, roomName, res);
+               }
+               else
+                   returnFail(res, err);
             });
         }
         catch(e)
         {
-            console.log("[d.js] FAILED to get last embed: Aborting. CREATING one, after all:");
+            console.log("[d.js]**ERR: FAILED to get last embed: Aborting. CREATING one, after all:");
 
-            // Send now >>
-            embed = createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img);
+            // Ensure there's not 0
+            if (curPlayers <= 0)
+            {
+                if (message.deletable)
+                {
+                    console.log('[d.js]**Attempting to delete message...');
+                    message.delete(1000*10).then(message =>
+                    {
+                        console.log('[d.js]**Message deleted');
+                        returnSuccess(res);
+                    });
+                }
+            }
+            else
+            {
+                // Send now >> probably err because bot was offline. Don't edit, make anew >>
+                embed = createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img);
+                sendEmbed(c, embed, roomName, res);
+            }
         }
     }
-
-    // Send now >>
-    sendEmbed(c, embed, roomName, res);
 });
 
 // .............................................................................
@@ -388,6 +477,11 @@ function sendEmbed(channel, embed, roomName, res)
         returnFail(res, '[d.js] Invalid embed');
         return;
     }
+    if (!roomName)
+    {
+        returnFail(res, '[d.js] Invalid roomName');
+        return;
+    }
     if (!res)
     {
         returnFail(res, '[d.js] Invalid res');
@@ -395,32 +489,26 @@ function sendEmbed(channel, embed, roomName, res)
     }
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-    // TODO: Edit the original!
-    // var lastEmbed = client.user.lastMessage.embeds[0];
-
+    console.log('[d.js] (Re)Sending embed...');
     channel.send({ embed }).then(message =>
     {
         // Success >>
         // https://discord.js.org/#/docs/main/master/class/MessageEmbed?scrollTo=createdAt
-        var id = message.id;
         console.log('[d.js] Successful embed msg! message.embeds[0] == ' + message.embeds[0]);
-        console.log('[d.js] Successful embed msg! message.embeds[0].title == ' + message.embeds[0].title);
+        console.log('[d.js] message.embeds[0].title == ' + message.embeds[0].title);
+        var id = message.id;
         console.log('[d.js] message.id == ' + id);
 
         // Add to dictionary
         lfgDict[roomName] = id;
 
-        var data = {
-            success: true
-        };
-
-        res.json(data);
+        returnSuccess(res);
     })
     .catch(err =>
     {
         // ERR >>
         console.error('[d.js] Err attempting to send embed: ' + err);
-        res.sendStatus(500).json({error: err});
+        returnFail(res, err);
     });
 }
 
@@ -485,10 +573,7 @@ router.get('/guild/online', (req, res) =>
     var g = getMyGuild();
     var onlineMembers = g.members.filter(m => m.presence.status === 'online').size;
 
-    var data = {
-        onlineCount: onlineMembers
-    };
-    res.json(data);
+    returnSuccess(res);
 
     console.log('[d.js] Done. onlineMembers==' + onlineMembers);
 });
@@ -508,6 +593,16 @@ router.get('/guild/online', (req, res) =>
 
 // ############################################################################################
 // funcs >>
+// ...........................................................................................
+function returnSuccess(res)
+{
+    var data = {
+        success: true
+    };
+
+    res.json(data);
+}
+
 // ...........................................................................................
 function returnFail(res, error)
 {

@@ -20,8 +20,8 @@ var whitelist =
 ];
 var corsOptions =
 {
-  origin: whitelist,
-  optionsSuccessStatus: 200
+    origin: whitelist,
+    optionsSuccessStatus: 200
 };
 router.options(whitelist, cors()); // include before other routes
 
@@ -36,6 +36,7 @@ var mongoSecretURI = mongoSecrets.uri;
 
 var adminEmail = secretKeys.adminEmails[0];
 var supportEmail = secretKeys.supportEmail;
+var affiliates = secretKeys.affiliates;
 
 // ...........................................................................................
 // Stripe setup
@@ -105,14 +106,14 @@ router.get('/charge/testErr', cors(corsOptions), (req, res) =>
 // GET - Test display product receipt ERROR
 // router.get('/testbalance', cors(corsOptions), function(req, res)
 // {
-//     getBalance().then((balance) =>
+//     getBalance().then(balance =>
 //     {
 //         console.log('success: ' + tolCommon.J(balance))
 //
 //         console.error('[STRIPE-RESULT] success @ /testbalance');
 //         res.send(balance);
 //     })
-//     .catch((err) =>
+//     .catch(err =>
 //     {
 //         console.log('err: ' + tolCommon.J(err))
 //         console.error('[STRIPE-RESULT] Err result @ /testbalance');
@@ -166,7 +167,7 @@ router.get('/iptest', (req, res) =>
 
 // ...........................................................................................
 // POST - Process charge, then show results
-router.post('/charge/:name', cors(corsOptions), function(req, res)
+router.post('/charge/:name', cors(corsOptions), (req, res) =>
 {
     console.log( '[Stripe] params == ' + tolCommon.J(req.params) );
     console.log( '[Stripe] body == ' + tolCommon.J(req.body) );
@@ -231,7 +232,7 @@ function getBalance(res)
             return Promise.resolve(balance);
         }
     })
-    .catch((err) =>
+    .catch(err =>
     {
         console.log('[STRIPE-ERR] getBalance ERR: ' + tolCommon.J(err));
         if (res && !res.headersSent)
@@ -275,7 +276,7 @@ function verifyEvent(event_json, callback)
             resolve(event);
         }
     })
-    .catch((err) =>
+    .catch(err =>
     {
         console.log("[STRIPE-ERR] ERR @ verifying event: " + tolCommon.J(err));
         if (callback)
@@ -314,12 +315,12 @@ function verifyEvent(event_json, callback)
 // {
 //     console.log('@ GET /dbtest');
 //
-//     getDelSteamKey().then((steamKey) =>
+//     getDelSteamKey().then(steamKey =>
 //     {
 //         // console.log('keyIndex==' + steamKey);
 //         res.send(steamKey || "nada");
 //     })
-//     .catch((err) =>
+//     .catch(err =>
 //     {
 //         res.status(500).send(err);
 //     })
@@ -417,12 +418,61 @@ function addSteamKey(steamKey)
                     return reject(`Auto-Steam Keys out of stock! Email ${supportEmail} and let them know and deliver one ASAP!`);
             });
         });
-    }).catch((err) =>
+    }).catch(err =>
     {
         console.error(err);
         return reject(err);
     });
 }
+
+// ...........................................................................................
+// 20%
+// function addAffiliate(ref, refName, refUrl)
+// {
+//     console.log('@ addAffiliate');
+//
+//     return new Promise ((resolve, reject) =>
+//     {
+//         // Standard URI format: mongodb://[dbuser:dbpassword@]host:port/dbname
+//         mongodb.MongoClient.connect(mongoSecretURI, (err, db) =>
+//         {
+//             if (err)
+//                 return reject(err);
+//
+//             console.log('[Stripe] @ addAffiliate: Connected');
+//
+//             // Get affiliates "collection"
+//             var affiliates = db.collection('affiliates');
+//
+//             // Find Stripe "key"
+//             var findStripeKey = { '_id': 'stripe' };
+//             affiliates.find(findStripeKey).toArray((error, docs) =>
+//             {
+//                 if (error)
+//                     return reject(error);
+//
+//                 // Add used key
+//                 affiliates.update(findStripeKey,
+//                 {
+//                     $push: {
+//                         KEYS_AVAIL_KEY: {
+//                             $each: [ steamKey ],
+//                             $position: 0
+//                         }
+//                     }
+//                 });
+//
+//                 db.close();
+//                 return resolve(true)
+//                     return reject(`Auto-Steam Keys out of stock! Email ${supportEmail} and let them know and deliver one ASAP!`);
+//             });
+//         });
+//     }).catch(err =>
+//     {
+//         console.error(err);
+//         return reject(err);
+//     });
+// }
 
 // ...........................................................................................
 function delSteamKey(steamKey)
@@ -462,7 +512,7 @@ function delSteamKey(steamKey)
                     return reject(`Auto-Steam Keys out of stock! Email ${supportEmail} and let them know and deliver one ASAP!`);
             });
         });
-    }).catch((err) =>
+    }).catch(err =>
     {
         console.error(err);
         return reject(err);
@@ -506,7 +556,7 @@ function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip
         email: custEmail,
         metadata: meta
 
-    }).then((customer) =>
+    }).then(customer =>
     {
         console.log('[Stripe-2] Success! customer ==  ' + customer);
         results.customer = customer;
@@ -566,6 +616,28 @@ function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip
 
     }).then((err, webhookRes, body) =>
     {
+        console.log('[Stripe-8] Sending email, if affiliate sale...');
+        // results.discordHookRes = webhookRes
+        if (ref)
+        {
+            var affiliate = findAffiliateFromTag(ref);
+            if (affiliate)
+            {
+                // Email affiliate informing of sale
+                var emailTo = affiliate.email;
+                var emailSubj = "[Throne of Lies] Notification of Affiliate Sale!";
+                var emailBodyHtml = `
+                    <h2>Greetings, ${affiliate.name},</h2>
+                    <p>You had an affiliate sale from "${ref}:"</p>
+                    <p>$10 * 0.3 (30%) = <strong>$3</strong> Commission!</p>
+                    <p>Cheers,</p>
+                    <br>
+                    <p>-- Imperium42 Affiliate Team</p>`;
+                tolMailer.sendEmail(emailTo, emailSub, emailBodyHtml);
+            }
+        }
+
+        // FINISHED >>
         if (err)
             console.error('[Stripe-8-FINAL-RESULT] ERR: ' + J(err));
         else
@@ -604,6 +676,19 @@ function chargeCust(res, product, custEmail, stripeToken, amt, qty, ref, src, ip
                     renderReceiptErr(err, res);
         }
     });
+}
+
+// ..........................................................................................
+function findAffiliateFromTag(refTag)
+{
+    for(var i = 0; i < affiliates.length; i++)
+    {
+        var a = affiliates[i];
+
+        for (var y = 0; y < affiliates.tags; y++)
+        if(a.refTags[y] == tag)
+            return a;
+    }
 }
 
 // ..........................................................................................
