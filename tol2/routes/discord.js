@@ -39,6 +39,7 @@ var secretKeys = JSON.parse(fs.readFileSync('./data/secret-keys.json', 'utf8'));
 var discordWebhookUrls = secretKeys.discordWebhookUrls;
 var discordBotSecrets = secretKeys.discordBot;
 var unitySecret = secretKeys.unitySecret;
+var pfTolApiSecret = secretKeys.pfTolApiSecret;
 
 // ############################################################################################
 // Discord setup >>
@@ -163,6 +164,15 @@ if (ENABLE_BOT)
     client.login(discordBotSecrets.token);
 
 // ...........................................................................................
+function validatePFSecret(bodySecret)
+{
+    if (bodySecret !== pfTolApiSecret)
+        return false;
+    else
+        return true;
+}
+
+// ...........................................................................................
 function getGuildById(id)
 {
     var g = client.guilds.get(id);
@@ -206,6 +216,14 @@ function getBotTestingChannel()
 function getLFGChannel()
 {
     var c = getMyGuild().channels.get(tolGuild.channels.looking_for_game);
+    // console.log('[Discord.js] LFG Channel == ' + tolCommon.J(c));
+    return c;
+}
+
+// ...........................................................................................
+function getModChannel()
+{
+    var c = getMyGuild().channels.get(tolGuild.channels.mod_chat);
     // console.log('[Discord.js] LFG Channel == ' + tolCommon.J(c));
     return c;
 }
@@ -262,18 +280,61 @@ function checkBotOnline(res, forceFail)
 // }
 
 // ...........................................................................................
-function createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img, startedGame)
+function createLFGEndGameEmbed(players, gameMode, masterPlayerName, playerCount, img, winningFactions, finalClassesArr)
+{
+    // Logs
+    console.log(`[d.js] @ createLFGEmbed >>  
+        players:${players} // gameMode:${gameMode} // masterPlayerName:${masterPlayerName} // 
+        playerCount:${playerCount} // winningFaction:${winningFaction}`);
+
+    // Prep early defaults for dynamic props
+    var color = 'DARK_PURPLE';
+    var title = `Game Over. Winning Faction(s):`;
+    var descr = winningFactions;
+
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    // Set main embed
+    var embed = new Discord.RichEmbed()
+        .setColor(color)
+        .setTitle(title)
+        // .addField('Host:', 'someHostName', true)
+        // .addField('2:', '%2%', true)
+        // .addField('3:', '%3%', true)
+        .setDescription(descr)
+        .setAuthor(`${players} Players`, KILLER_AVATAR_IMG) // TODO: Faction avatar
+        // .setURL(LAUNCH_STEAM_URL)
+        .setImage(img)
+        // .setFooter('^ Link directly launches the game')
+        .setTimestamp(); // TODO: Ez date time?
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+    // Late dynamic props here (fields)
+    var isInline = true;
+    for (var i; i < players.length; i++)
+    {
+        var p = players[i];
+        embed.addField('i', p, isInline); // \u200B == blank
+    }
+
+    // if (isReady && !startedGame)
+    //     embed.addField('^ READY', 'Hurry - Host can start now!', true); // \u200B == blank
+
+    return embed;
+}
+
+// ...........................................................................................
+function createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img, startedGame, masterPlayerName)
 {
     // Logs
     console.log(`[d.js] @ createLFGEmbed >>  
         playerName:${playerName} // curPlayers:${curPlayers} // maxPlayers:${maxPlayers} // 
-        minPlayers:${minPlayers} // startedGame:${startedGame}`);
+        minPlayers:${minPlayers} // startedGame:${startedGame} // masterPlayerName:${masterPlayerName}`);
 
     // Prep early defaults for dynamic props
     var color = 'RED';
     var title = `>> CLICK to Join ${playerName}: Play Now! <<`;
     var isReady = curPlayers >= minPlayers
-    var isFull = curPlayers >= maxPlayers;
+    var isFullOrStarted = curPlayers >= maxPlayers || startedGame;
     var isClosing = curPlayers <= 0;
 
     // Set early dynamic props
@@ -284,10 +345,19 @@ function createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img, sta
     }
     else if (curPlayers > 1 && !isReady)
         color = '#FFFF00'; // Yellow
-    else if (isReady && !isFull)
+    else if (curPlayers > 1 && isReady && !isFullOrStarted)
         color = 'GREEN';
-    else if (isFull)
+    else if (isFullOrStarted)
         color = 'AQUA';
+
+    // Override info if started
+    if (isFullOrStarted)
+    {
+        color = 'AQUA';
+        title = `${playerName}'s game has STARTED with ${curPlayers} players!`;
+    }
+    // else if (isClosing)
+    //     color = 'DARK_PURPLE';
 
     console.log('[d.js] color == ' + color);
 
@@ -326,6 +396,120 @@ router.get('/test', (req, res) =>
 });
 
 // ...........................................................................................
+// POST: Webhook from playfab
+router.post('/playfabhook', (req, res) =>
+{
+    console.log('[d.js] @ /playfabhook');
+
+    // Body
+    var secret = req.body.pfTolApiSecret;
+    var displayName = req.body.displayName;
+    var userName = req.body.userName;
+
+    // Validate
+    if (!validatePFSecret)
+        returnFail(res, 'Invalid Secret');
+
+    // Prep + Send
+    var msg = `${userName} (${displayName})`;
+    var c = getModChannel();
+
+    sendMsg(c, msg, res);
+});
+
+// ...........................................................................................
+// POST: Live webhook handling
+router.post('/endgamelfg', (req, res) =>
+{
+    console.log('[d.js] @ /endgamelfg');
+
+    // **NOT READY**
+    returnSuccess(res);
+
+    // Body
+    var secret = req.body.unitySecret;
+    var playersArr = req.body.players.playersArr;
+    var gameMode = req.body.gameMode;
+    var masterPlayerName = req.body.masterPlayerName;
+    var roomName = req.body.roomName;
+    var playerCount = req.body.playerCount;
+    var winningFactionsStr = req.body.winningFactionsStr;
+    var finalClassesArr = req.body.finalClasses.playersArr;
+
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    // Validate
+    console.log('[d.js] Validating announcelfg...');
+    if (!checkBotOnline(res))
+    {
+        returnFail(res, '[d.js] BOT offline');
+        return;
+    }
+    if (secret !== unitySecret)
+    {
+        returnFail(res, '[d.js] Invalid Secret');
+        return;
+    }
+    if (!playersArr)
+    {
+        (res, '[d.js] Invalid players');
+        return;
+    }
+    if (!gameMode)
+    {
+        (res, '[d.js] Invalid gameMode');
+        return;
+    }
+    if (!masterPlayerName)
+    {
+        (res, '[d.js] Invalid masterPlayerName!');
+        return;
+    }
+    if (!roomName)
+    {
+        (res, '[d.js] Invalid roomName!');
+        return;
+    }
+    if (!playerCount)
+    {
+        (res, '[d.js] Invalid playerCount!');
+        return;
+    }
+    if (!winningFactionsStr)
+    {
+        (res, '[d.js] Invalid winningFactionsStr!');
+        return;
+    }
+    if (!finalClassesArr)
+    {
+        (res, '[d.js] Invalid finalClassesArr!');
+        return;
+    }
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+    // Get channel
+    console.log('[d.js] Getting channel...');
+    var c = getLFGChannel();
+    // var c = getBotTestingChannel();
+
+    // Get game mode img
+    var img = CASUAL_IMG;
+    if (gameMode === "Aftermath")
+        img = AFTERMATH_IMG;
+
+    // Create an new embed with current info
+    console.log('[d.js] Creating END embed...');
+    var embed = createLFGEndGameEmbed(playersArr, gameMode, masterPlayerName, playerCount, img, winningFactionsStr, finalClassesArr)
+    console.log('[d.js] New RichEmbed created! embed.title == ' + embed.title);
+
+    // Attempt to REMOVE the room ID so we don't edit it again
+    lfgDict[roomName] = null;
+
+    // CREATE post : Setup embed dynamically >>
+    console.log('[d.js] BOT Online - NO msg id: Create NEW embed');
+    sendEmbed(c, embed, roomName, res);
+});
+
+// ...........................................................................................
 // POST: Live webhook handling
 router.post('/announcelfg', (req, res) =>
 {
@@ -340,20 +524,11 @@ router.post('/announcelfg', (req, res) =>
     var playerName = req.body.playerName;
     var roomName = req.body.roomName;
     var startedGame = req.body.startedGame;
-    // var masterClientName = req.body.masterClientName;
+    var masterPlayerName = req.body.masterPlayerName;
 
-    // Validate
-    console.log('[d.js] Validating announcelfg...');
-    if (!checkBotOnline(res))
-    {
-        returnFail(res, '[d.js] BOT offline');
-        return;
-    }
-    if (secret !== unitySecret)
-    {
-        returnFail(res, '[d.js] Invalid Secret');
-        return;
-    }
+    // Fix weird bool parsing
+    if (startedGame === 'False')
+        startedGame = false;
 
     // Get channel
     console.log('[d.js] Getting channel...');
@@ -367,7 +542,7 @@ router.post('/announcelfg', (req, res) =>
 
     // Create an new embed with current info
     console.log('[d.js] Creating embed...');
-    var embed = createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img, startedGame);
+    var embed = createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img, startedGame, masterPlayerName);
     console.log('[d.js] New RichEmbed created! embed.title == ' + embed.title);
 
     // If a previous room was found, EDIT instead of make a new one
@@ -410,10 +585,18 @@ router.post('/announcelfg', (req, res) =>
                 if (!isTooOld)
                     return message.edit({ embed });
                 else
-                    return message.send({ embed });
+                    return null;
             })
             .then(message =>
             {
+                // Null?
+                if (!message)
+                {
+                    // This means the message was probably too old or couldn't be edited for whatever reason. SEND instead.
+                    sendEmbed(c, embed, roomName, res);
+                    return;
+                }
+
                 // 0 players?
                 if (curPlayers <= 0)
                 {
@@ -422,9 +605,9 @@ router.post('/announcelfg', (req, res) =>
                     if (message.deletable)
                     {
                         // Deletable
-                        console.log('[d.js] DELETING message in 10s. Returning success now.');
+                        console.log('[d.js] DELETING message in 3s. Returning success now.');
                         returnSuccess(res);
-                        message.delete(1000*10).then(message =>
+                        message.delete(1000*3).then(message =>
                         {
                             console.log('[d.js]**Message deleted');
                             delete msgId[roomName];
@@ -539,6 +722,46 @@ function sendEmbed(channel, embed, roomName, res)
 }
 
 // .............................................................................
+function sendMsg(channel, msg, res)
+{
+    console.log('[d.js] @ sendMsg. msg == ' + msg);
+
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    // Validate
+    var errMsg = "";
+    if (!channel)
+    {
+        returnFail(res, '[d.js] Invalid channel');
+        return;
+    }
+    if (!msg)
+    {
+        returnFail(res, '[d.js] Invalid msg');
+        return;
+    }
+    if (!res)
+    {
+        returnFail(res, '[d.js] Invalid res');
+        return;
+    }
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+    console.log('[d.js] Sending msg...');
+    channel.send(msg).then(message =>
+    {
+        // Success >>
+        console.log('[d.js] Successful msg!');
+        returnSuccess(res);
+    })
+    .catch(err =>
+    {
+        // ERR >>
+        console.error('[d.js] Err attempting to send msg: ' + err);
+        returnFail(res, err);
+    });
+}
+
+// .............................................................................
 // GET: Guild general info
 router.get('/guild', (req, res) =>
 {
@@ -599,7 +822,11 @@ router.get('/guild/online', (req, res) =>
     var g = getMyGuild();
     var onlineMembers = g.members.filter(m => m.presence.status === 'online').size;
 
-    returnSuccess(res);
+    // returnSuccess(res);
+    var DiscordOnlineCount = {
+        onlineCount: onlineMembers
+    };
+    res.json(DiscordOnlineCount);
 
     console.log('[d.js] Done. onlineMembers==' + onlineMembers);
 });
