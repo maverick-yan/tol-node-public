@@ -60,9 +60,17 @@ var pfTolApiSecret = secretKeys.pfTolApiSecret;
  */
 const DISCORD_DEBUG = false;
 const ENABLE_BOT = true;
+
 const CASUAL_IMG = 'https://i.imgur.com/4lSTVOg.png';
 const AFTERMATH_IMG = 'https://i.imgur.com/bUGYFy4.png';
 const KILLER_AVATAR_IMG = 'https://vignette2.wikia.nocookie.net/tol1879/images/d/d6/Killer-Type.png';
+
+const FACTION_BD_IMG = 'https://i.imgur.com/PJsyrOf.png';
+const FACTION_US_IMG = 'https://i.imgur.com/Tf9ALTV.png';
+const FACTION_CULT_IMG = 'https://i.imgur.com/xH7vSLt.png';
+const FACTION_NEUTRAL_IMG = 'https://i.imgur.com/BgWoWtL.png';
+const FACTION_KING_IMG = 'https://i.imgur.com/ZUM2bDL.png';
+
 const LAUNCH_STEAM_URL = 'http://throneofli.es/play'; // steam://rungameid/595280';
 
 var lfgDict = {};
@@ -156,6 +164,10 @@ client.on('message', msg =>
             msg.reply('Pong!');
         else
             msg.reply('[Test] Pong!');
+    }
+    else if (msg.content === '.pinglfg')
+    {
+        msg.reply('test @lfg');
     }
 });
 
@@ -280,17 +292,39 @@ function checkBotOnline(res, forceFail)
 // }
 
 // ...........................................................................................
-function createLFGEndGameEmbed(players, gameMode, masterPlayerName, playerCount, img, winningFactions, finalClassesArr)
+function createLFGEndGameEmbed(players, gameMode, masterPlayerName, playerCount, img,
+    winningFactions, finalClasses, aliasArr)
 {
     // Logs
-    console.log(`[d.js] @ createLFGEmbed >>  
+    console.log(`[d.js] @ createLFGEndGameEmbed >>  
         players:${players} // gameMode:${gameMode} // masterPlayerName:${masterPlayerName} // 
-        playerCount:${playerCount} // winningFaction:${winningFaction}`);
+        playerCount:${playerCount} // winningFaction:${winningFactions} // finalClasses:${finalClasses}
+        // aliasArr:${aliasArr}`);
 
     // Prep early defaults for dynamic props
     var color = 'DARK_PURPLE';
-    var title = `Game Over. Winning Faction(s):`;
+    var title = `${masterPlayerName}'s Game is OVER! Winning Faction(s):`;
     var descr = winningFactions;
+
+    // Check core winner
+    var subBD = "Blue Dragon";
+    var subUS = "Unseen";
+    var subCult = "Cult";
+    var subNeutral = "Neutral";
+    var subKing = "King";
+
+    // Avatar img >>
+    var avatarImg = FACTION_BD_IMG; // Fallback
+    if (winningFactions.includes(subBD))
+        avatarImg = FACTION_BD_IMG;
+    else if (winningFactions.includes(subUS))
+        avatarImg = FACTION_US_IMG;
+    else if (winningFactions.includes(subCult))
+        avatarImg = FACTION_CULT_IMG;
+    else if (winningFactions.includes(subNeutral))
+        avatarImg = FACTION_NEUTRAL_IMG;
+    else if (winningFactions.includes(subKing))
+        avatarImg = FACTION_KING_IMG;
 
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Set main embed
@@ -301,7 +335,7 @@ function createLFGEndGameEmbed(players, gameMode, masterPlayerName, playerCount,
         // .addField('2:', '%2%', true)
         // .addField('3:', '%3%', true)
         .setDescription(descr)
-        .setAuthor(`${players} Players`, KILLER_AVATAR_IMG) // TODO: Faction avatar
+        .setAuthor(`${playerCount} Players`, avatarImg) // TODO: Faction avatar
         // .setURL(LAUNCH_STEAM_URL)
         .setImage(img)
         // .setFooter('^ Link directly launches the game')
@@ -310,10 +344,14 @@ function createLFGEndGameEmbed(players, gameMode, masterPlayerName, playerCount,
 
     // Late dynamic props here (fields)
     var isInline = true;
-    for (var i; i < players.length; i++)
+    for (var i = 0; i < players.length; i++)
     {
         var p = players[i];
-        embed.addField('i', p, isInline); // \u200B == blank
+        var c = finalClasses[i];
+        var a = aliasArr[i];
+        var msg = `[${i}] ${a} (${c})`;
+
+        embed.addField(msg, p, isInline); // \u200B == blank
     }
 
     // if (isReady && !startedGame)
@@ -334,7 +372,7 @@ function createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img, sta
     var color = 'RED';
     var title = `>> CLICK to Join ${playerName}: Play Now! <<`;
     var isReady = curPlayers >= minPlayers
-    var isFullOrStarted = curPlayers >= maxPlayers || startedGame;
+    var isFullOrStarted = (curPlayers >= maxPlayers) || startedGame;
     var isClosing = curPlayers <= 0;
 
     // Set early dynamic props
@@ -348,16 +386,11 @@ function createLFGEmbed(playerName, curPlayers, maxPlayers, minPlayers, img, sta
     else if (curPlayers > 1 && isReady && !isFullOrStarted)
         color = 'GREEN';
     else if (isFullOrStarted)
-        color = 'AQUA';
-
-    // Override info if started
-    if (isFullOrStarted)
     {
+        console.log(`[d.js] isFullOrStarted:${isFullOrStarted} // ${startedGame}`);
         color = 'AQUA';
         title = `${playerName}'s game has STARTED with ${curPlayers} players!`;
     }
-    // else if (isClosing)
-    //     color = 'DARK_PURPLE';
 
     console.log('[d.js] color == ' + color);
 
@@ -424,72 +457,111 @@ router.post('/endgamelfg', (req, res) =>
     console.log('[d.js] @ /endgamelfg');
 
     // **NOT READY**
-    returnSuccess(res);
+    // returnSuccess(res);
 
     // Body
     var secret = req.body.unitySecret;
-    var playersArr = req.body.players.playersArr;
+
+    var players = JSON.parse(req.body.players);
+    var playersArr = players.playersArr;
+    console.log('playersArr == ' + playersArr);
+    console.log('playersArr[0] == ' + playersArr[0]);
+
     var gameMode = req.body.gameMode;
     var masterPlayerName = req.body.masterPlayerName;
     var roomName = req.body.roomName;
     var playerCount = req.body.playerCount;
     var winningFactionsStr = req.body.winningFactionsStr;
-    var finalClassesArr = req.body.finalClasses.playersArr;
+
+    var finalClasses = JSON.parse(req.body.finalClasses);
+    var finalClassesArr = finalClasses.finalClassesArr;
+    console.log('finalClassesArr == ' + finalClassesArr);
+    console.log('finalClassesArr[0] == ' + finalClassesArr[0]);
+
+    var aliases = JSON.parse(req.body.aliases);
+    var aliasArr = aliases.aliasArr;
+    console.log('aliasArr == ' + aliasArr);
+    console.log('aliasArr[0] == ' + aliasArr[0]);
 
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Validate
-    console.log('[d.js] Validating announcelfg...');
+    console.log('[d.js] Validating endgamelfg...');
     if (!checkBotOnline(res))
     {
-        returnFail(res, '[d.js] BOT offline');
+        var msg = '[d.js] BOT offline';
+        console.error(msg);
+        returnFail(res, msg);
         return;
     }
-    if (secret !== unitySecret)
+    else if (secret !== unitySecret)
     {
-        returnFail(res, '[d.js] Invalid Secret');
+        var msg = '[d.js] Invalid Secret';
+        console.error(msg);
+        returnFail(res, msg);
         return;
     }
-    if (!playersArr)
+    else if (!playersArr)
     {
-        (res, '[d.js] Invalid players');
+        var msg = '[d.js] Invalid playerArr';
+        console.error(msg);
+        returnFail(res, msg);
         return;
     }
-    if (!gameMode)
+    else if (!gameMode)
     {
-        (res, '[d.js] Invalid gameMode');
+        var msg = '[d.js] Invalid gameMode';
+        console.error(msg);
+        returnFail(res, msg);
         return;
     }
-    if (!masterPlayerName)
+    else if (!masterPlayerName)
     {
-        (res, '[d.js] Invalid masterPlayerName!');
+        var msg = '[d.js] Invalid masterPlayerName';
+        console.error(msg);
+        returnFail(res, msg);
         return;
     }
-    if (!roomName)
+    else if (!roomName)
     {
-        (res, '[d.js] Invalid roomName!');
+        var msg = '[d.js] Invalid roomName';
+        console.error(msg);
+        returnFail(res, msg);
         return;
     }
-    if (!playerCount)
+    else if (!playerCount) 
     {
-        (res, '[d.js] Invalid playerCount!');
+        var msg = '[d.js] Invalid playerCount';
+        console.error(msg);
+        returnFail(res, msg);
         return;
     }
-    if (!winningFactionsStr)
+    else if (!winningFactionsStr)
     {
-        (res, '[d.js] Invalid winningFactionsStr!');
+        var msg = '[d.js] Invalid winningFactionsStr';
+        console.error(msg);
+        returnFail(res, msg);
         return;
     }
-    if (!finalClassesArr)
+    else if (!finalClassesArr)
     {
-        (res, '[d.js] Invalid finalClassesArr!');
+        var msg = '[d.js] Invalid finalClassesArr';
+        console.error(msg);
+        returnFail(res, msg);
+        return;
+    }
+    else if (!aliasArr)
+    {
+        var msg = '[d.js] Invalid aliasArr';
+        console.error(msg);
+        returnFail(res, msg);
         return;
     }
     // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     // Get channel
     console.log('[d.js] Getting channel...');
-    var c = getLFGChannel();
-    // var c = getBotTestingChannel();
+    // var c = getLFGChannel();
+    var c = getBotTestingChannel();
 
     // Get game mode img
     var img = CASUAL_IMG;
@@ -498,7 +570,8 @@ router.post('/endgamelfg', (req, res) =>
 
     // Create an new embed with current info
     console.log('[d.js] Creating END embed...');
-    var embed = createLFGEndGameEmbed(playersArr, gameMode, masterPlayerName, playerCount, img, winningFactionsStr, finalClassesArr)
+    var embed = createLFGEndGameEmbed(playersArr, gameMode, masterPlayerName, playerCount,
+        img, winningFactionsStr, finalClassesArr, aliasArr)
     console.log('[d.js] New RichEmbed created! embed.title == ' + embed.title);
 
     // Attempt to REMOVE the room ID so we don't edit it again

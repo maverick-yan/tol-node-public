@@ -48,11 +48,12 @@ exports.getIP = function(req)
 exports.InitLog = function(req, routeName, httpType)
 {
     // Substitute sensitive data for random mask
-    if (req.Password !== null)
-        req.Password = "******";
+    var filteredReq = req;
+    if (req.Password || req.body.Password)
+        filteredReq.body.Password = "******";
 
     console.log( '\n' + this.GetDateTime() );
     console.log('####################################');
     console.log(`[${httpType}] request to "${routeName}" ..`);
-    console.log( '<< REQ: ' + this.J(req.body, true) + '\n' );
+    console.log( '<< REQ: ' + this.J(filteredReq.body, true) + '\n' );
 };
