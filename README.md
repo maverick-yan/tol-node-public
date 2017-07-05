@@ -1,5 +1,7 @@
 # tol-node-public (TNP) - for game developers
 
+## IMPORTANT: Use this for SNIPPETS, not to actually clone. This is meant for example-use and sharing chunks of code that may help you do what you want. This repo is no longer maintained as of 7/5/2017 ~ it should still serve of use for years to come :)
+
 <img src="https://i.imgur.com/NYmM7It.png">
 
 <img src="https://i.imgur.com/NyeIsMh.png"><br>
